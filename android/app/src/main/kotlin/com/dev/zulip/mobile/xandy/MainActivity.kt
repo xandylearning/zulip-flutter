@@ -1,4 +1,4 @@
-package com.zulip.flutter
+package com.dev.zulip.mobile.xandy
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity

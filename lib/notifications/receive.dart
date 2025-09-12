@@ -58,7 +58,12 @@ class NotificationService {
         await ZulipBinding.instance.firebaseInitializeApp(
           options: kFirebaseOptionsAndroid);
 
-        await NotificationDisplayManager.init();
+        try {
+          await NotificationDisplayManager.init();
+        } catch (e) {
+          // If notification initialization fails, log the error but don't crash the app
+          debugLog('Failed to initialize notification display manager: $e');
+        }
         ZulipBinding.instance.firebaseMessagingOnMessage
           .listen(_onForegroundMessage);
         ZulipBinding.instance.firebaseMessagingOnBackgroundMessage(

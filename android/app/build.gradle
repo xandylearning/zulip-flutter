@@ -20,7 +20,7 @@ try {
 }
 
 android {
-    namespace "com.zulip.flutter"
+    namespace "com.dev.zulip.mobile.xandy"
 
     compileSdkVersion flutter.compileSdkVersion
 
@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zulipmobile"
+        applicationId "com.dev.zulip.mobile.xandy"
         minSdkVersion 28
         targetSdkVersion flutter.targetSdkVersion
         // These are synced to local.properties from pubspec.yaml by the flutter tool.

@@ -281,6 +281,15 @@ ApiRequestException _makeApiException(String routeName, int httpStatus, Map<Stri
         data: json,
       );
     }
+    // For 4xx errors, if we can't parse as a proper Zulip API error,
+    // create a generic ZulipApiException instead of MalformedServerResponseException
+    return ZulipApiException(
+      routeName: routeName,
+      httpStatus: httpStatus,
+      code: 'BAD_REQUEST',
+      message: GlobalLocalizations.zulipLocalizations.errorRequestFailed(httpStatus),
+      data: json ?? {},
+    );
   } else if (500 <= httpStatus && httpStatus <= 599) {
     return Server5xxException(
       routeName: routeName, httpStatus: httpStatus, data: json);

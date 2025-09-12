@@ -22,15 +22,32 @@ ThemeData zulipThemeData(BuildContext context) {
 
   // This applies Material 3's color system to produce a palette of
   // appropriately matching and contrasting colors for use in a UI.
-  // The Zulip brand color is a starting point, but doesn't end up as
-  // one that's directly used.  (After all, we didn't design it for that
-  // purpose; we designed a logo.)  See docs:
+  // The X&Y Learning brand color is used as the primary color throughout the app.
+  // See docs:
   //   https://api.flutter.dev/flutter/material/ColorScheme/ColorScheme.fromSeed.html
   // Or try this tool to see the whole palette:
   //   https://m3.material.io/theme-builder#/custom
   final colorScheme = ColorScheme.fromSeed(
     brightness: brightness,
-    seedColor: kZulipBrandColor);
+    seedColor: kZulipBrandColor,
+  ).copyWith(
+    primary: kZulipBrandColor,
+    onPrimary: Colors.white,
+    primaryContainer: kZulipBrandColor.withValues(alpha: 0.1),
+    onPrimaryContainer: kZulipBrandColor,
+    secondary: const Color(0xFFf05462), // Brand red
+    onSecondary: Colors.white,
+    secondaryContainer: const Color(0xFFf05462).withValues(alpha: 0.1),
+    onSecondaryContainer: const Color(0xFFf05462),
+    tertiary: const Color(0xFFf6c12e), // Brand yellow
+    onTertiary: Colors.black,
+    tertiaryContainer: const Color(0xFFf6c12e).withValues(alpha: 0.1),
+    onTertiaryContainer: const Color(0xFFf6c12e),
+    // Ensure proper text contrast in dark mode
+    onSurface: brightness == Brightness.dark ? Colors.white : Colors.black,
+    onBackground: brightness == Brightness.dark ? Colors.white : Colors.black,
+    onSurfaceVariant: brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.6),
+  );
 
   switch (brightness) {
     case Brightness.light: {
@@ -70,9 +87,106 @@ ThemeData zulipThemeData(BuildContext context) {
       foregroundColor: designVariables.icon,
     )),
     elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(
-      backgroundColor: colorScheme.secondaryContainer,
-      foregroundColor: colorScheme.onSecondaryContainer,
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
     )),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
+      foregroundColor: colorScheme.primary,
+      side: BorderSide(color: colorScheme.primary),
+    )),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(
+      foregroundColor: colorScheme.primary,
+    )),
+    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
+    )),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary;
+        }
+        return null;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary.withValues(alpha: 0.5);
+        }
+        return null;
+      }),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary;
+        }
+        return null;
+      }),
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary;
+        }
+        return null;
+      }),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+      ),
+      focusColor: colorScheme.primary,
+      labelStyle: TextStyle(color: colorScheme.primary),
+      floatingLabelStyle: TextStyle(color: colorScheme.primary),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: colorScheme.primary,
+      linearTrackColor: colorScheme.primary.withValues(alpha: 0.3),
+      circularTrackColor: colorScheme.primary.withValues(alpha: 0.3),
+    ),
+    tabBarTheme: TabBarThemeData(
+      labelColor: colorScheme.primary,
+      unselectedLabelColor: brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.6),
+      indicatorColor: colorScheme.primary,
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      selectedItemColor: colorScheme.primary,
+      unselectedItemColor: brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.6),
+      type: BottomNavigationBarType.fixed,
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      selectedIconTheme: IconThemeData(color: colorScheme.primary),
+      selectedLabelTextStyle: TextStyle(color: colorScheme.primary),
+      unselectedIconTheme: IconThemeData(color: brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.6)),
+      unselectedLabelTextStyle: TextStyle(color: brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.7) : colorScheme.onSurface.withValues(alpha: 0.6)),
+    ),
+    listTileTheme: ListTileThemeData(
+      iconColor: colorScheme.primary,
+      textColor: colorScheme.onSurface,
+      selectedTileColor: colorScheme.primary.withValues(alpha: 0.1),
+      selectedColor: colorScheme.primary,
+    ),
+    cardTheme: CardThemeData(
+      color: colorScheme.surface,
+      shadowColor: colorScheme.primary.withValues(alpha: 0.1),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: colorScheme.surface,
+      selectedColor: colorScheme.primary,
+      labelStyle: TextStyle(color: colorScheme.onSurface),
+      secondaryLabelStyle: TextStyle(color: colorScheme.onPrimary),
+      brightness: brightness,
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: colorScheme.primary,
+      inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.3),
+      thumbColor: colorScheme.primary,
+      overlayColor: colorScheme.primary.withValues(alpha: 0.2),
+    ),
     appBarTheme: AppBarTheme(
       // Set these two fields to prevent a color change in [AppBar]s when
       // there is something scrolled under it. If an app bar hasn't been
@@ -81,12 +195,13 @@ ThemeData zulipThemeData(BuildContext context) {
       // ColorScheme.surface otherwise, and those are different colors.
       scrolledUnderElevation: 0,
       backgroundColor: designVariables.bgTopBar,
+      foregroundColor: brightness == Brightness.dark ? Colors.white : colorScheme.primary,
 
       // TODO match actions layout to Figma
 
       titleTextStyle: TextStyle(
         inherit: false,
-        color: designVariables.title,
+        color: brightness == Brightness.dark ? Colors.white : colorScheme.primary,
         fontSize: 20,
         letterSpacing: 0.0,
         height: (30 / 20),
@@ -111,6 +226,22 @@ ThemeData zulipThemeData(BuildContext context) {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: designVariables.mainBackground,
     tooltipTheme: const TooltipThemeData(preferBelow: false),
+    useMaterial3: true,
+    primarySwatch: MaterialColor(
+      kZulipBrandColor.value,
+      <int, Color>{
+        50: kZulipBrandColor.withValues(alpha: 0.1),
+        100: kZulipBrandColor.withValues(alpha: 0.2),
+        200: kZulipBrandColor.withValues(alpha: 0.3),
+        300: kZulipBrandColor.withValues(alpha: 0.4),
+        400: kZulipBrandColor.withValues(alpha: 0.5),
+        500: kZulipBrandColor,
+        600: kZulipBrandColor.withValues(alpha: 0.7),
+        700: kZulipBrandColor.withValues(alpha: 0.8),
+        800: kZulipBrandColor.withValues(alpha: 0.9),
+        900: kZulipBrandColor,
+      },
+    ),
     bottomSheetTheme: BottomSheetThemeData(
       clipBehavior: Clip.antiAlias,
       backgroundColor: designVariables.bgContextMenu,
@@ -121,11 +252,10 @@ ThemeData zulipThemeData(BuildContext context) {
   );
 }
 
-/// The Zulip "brand color", a purplish blue.
+/// The X&Y Learning brand color, a deep blue.
 ///
-/// This is chosen as the sRGB midpoint of the Zulip logo's gradient.
-// As computed by Anders: https://github.com/zulip/zulip-mobile/pull/4467
-const kZulipBrandColor = Color.fromRGBO(0x64, 0x92, 0xfe, 1);
+/// This is the primary brand color for X&Y Learning platform.
+const kZulipBrandColor = Color(0xFF414d75);
 
 /// Design variables, mainly from the Figma design.
 ///
@@ -148,38 +278,38 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     bgTopBar: const Color(0xfff5f5f5),
     borderBar: Colors.black.withValues(alpha: 0.2),
     borderMenuButtonSelected: Colors.black.withValues(alpha: 0.2),
-    btnBgAttHighIntInfoActive: const Color(0xff1e41d3),
-    btnBgAttHighIntInfoNormal: const Color(0xff3c6bff),
-    btnBgAttMediumIntInfoActive: const Color(0xff3c6bff).withValues(alpha: 0.22),
-    btnBgAttMediumIntInfoNormal: const Color(0xff3c6bff).withValues(alpha: 0.12),
+    btnBgAttHighIntInfoActive: const Color(0xFF2d3449),
+    btnBgAttHighIntInfoNormal: const Color(0xFF414d75),
+    btnBgAttMediumIntInfoActive: const Color(0xFF414d75).withValues(alpha: 0.22),
+    btnBgAttMediumIntInfoNormal: const Color(0xFF414d75).withValues(alpha: 0.12),
     btnLabelAttHigh: const Color(0xffffffff),
     btnLabelAttLowIntDanger: const Color(0xffc0070a),
-    btnLabelAttLowIntInfo: const Color(0xff2347c6),
+    btnLabelAttLowIntInfo: const Color(0xFF414d75),
     btnLabelAttMediumIntDanger: const Color(0xffac0508),
-    btnLabelAttMediumIntInfo: const Color(0xff1027a6),
+    btnLabelAttMediumIntInfo: const Color(0xFF414d75),
     btnShadowAttMed: const Color(0xff000000).withValues(alpha: 0.20),
     composeBoxBg: const Color(0xffffffff),
     contextMenuCancelText: const Color(0xff222222),
-    contextMenuItemBg: const Color(0xff6159e1),
-    contextMenuItemIcon: const Color(0xff4f42c9),
+    contextMenuItemBg: const Color(0xFF414d75),
+    contextMenuItemIcon: const Color(0xFF2d3449),
     contextMenuItemLabel: const Color(0xff242631),
     contextMenuItemMeta: const Color(0xff626573),
     contextMenuItemText: const Color(0xff381da7),
     editorButtonPressedBg: Colors.black.withValues(alpha: 0.06),
-    fabBg: const Color(0xff6e69f3),
-    fabBgPressed: const Color(0xff6159e1),
+    fabBg: const Color(0xFF414d75),
+    fabBgPressed: const Color(0xFF2d3449),
     fabLabel: const Color(0xfff1f3fe),
     fabLabelPressed: const Color(0xffeceefc),
     fabShadow: const Color(0xff2b0e8a).withValues(alpha: 0.4),
     foreground: const Color(0xff000000),
-    icon: const Color(0xff6159e1),
+    icon: const Color(0xFF414d75),
     iconSelected: const Color(0xff222222),
     labelCounterUnread: const Color(0xff222222),
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 0).toColor(),
     labelMenuButton: const Color(0xff222222),
     labelSearchPrompt: const Color(0xff000000).withValues(alpha: 0.5),
     labelTime: const Color(0x00000000).withValues(alpha: 0.49),
-    link: const Color(0xff066bd0), // from "Zulip Web UI kit"
+    link: const Color(0xFF414d75), // Brand blue
     listMenuItemBg: const Color(0xffcbcdd6),
     listMenuItemIcon: const Color(0xff9194a3),
     listMenuItemText: const Color(0xff2d303c),
@@ -192,7 +322,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     neutralButtonBg: const Color(0xff8c84ae),
     neutralButtonLabel: const Color(0xff433d5c),
     radioBorder: Color(0xffbbbdc8),
-    radioFillSelected: Color(0xff4370f0),
+    radioFillSelected: Color(0xFF414d75),
     statusAway: Color(0xff73788c).withValues(alpha: 0.25),
 
     // Following Web because it uses a gradient, to distinguish it by shape from
@@ -239,41 +369,41 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     bgTopBar: const Color(0xff242424),
     borderBar: const Color(0xffffffff).withValues(alpha: 0.1),
     borderMenuButtonSelected: Colors.white.withValues(alpha: 0.1),
-    btnBgAttHighIntInfoActive: const Color(0xff1e41d3),
-    btnBgAttHighIntInfoNormal: const Color(0xff1e41d3),
-    btnBgAttMediumIntInfoActive: const Color(0xff97b6fe).withValues(alpha: 0.12),
-    btnBgAttMediumIntInfoNormal: const Color(0xff97b6fe).withValues(alpha: 0.12),
+    btnBgAttHighIntInfoActive: const Color(0xFF2d3449),
+    btnBgAttHighIntInfoNormal: const Color(0xFF414d75),
+    btnBgAttMediumIntInfoActive: const Color(0xFF414d75).withValues(alpha: 0.12),
+    btnBgAttMediumIntInfoNormal: const Color(0xFF414d75).withValues(alpha: 0.12),
     btnLabelAttHigh: const Color(0xffffffff).withValues(alpha: 0.85),
     btnLabelAttLowIntDanger: const Color(0xffff8b7c),
-    btnLabelAttLowIntInfo: const Color(0xff84a8fd),
+    btnLabelAttLowIntInfo: const Color(0xFF414d75),
     btnLabelAttMediumIntDanger: const Color(0xffff8b7c),
-    btnLabelAttMediumIntInfo: const Color(0xff97b6fe),
+    btnLabelAttMediumIntInfo: const Color(0xFF414d75),
     btnShadowAttMed: const Color(0xffffffff).withValues(alpha: 0.21),
     composeBoxBg: const Color(0xff0f0f0f),
     contextMenuCancelText: const Color(0xffffffff).withValues(alpha: 0.75),
-    contextMenuItemBg: const Color(0xff7977fe),
-    contextMenuItemIcon: const Color(0xff9398fd),
+    contextMenuItemBg: const Color(0xFF414d75),
+    contextMenuItemIcon: Colors.white,
     contextMenuItemLabel: const Color(0xffdfe1e8),
     contextMenuItemMeta: const Color(0xff9194a3),
     contextMenuItemText: const Color(0xff9398fd),
     editorButtonPressedBg: Colors.white.withValues(alpha: 0.06),
-    fabBg: const Color(0xff4f42c9),
-    fabBgPressed: const Color(0xff4331b8),
+    fabBg: const Color(0xFF414d75),
+    fabBgPressed: const Color(0xFF2d3449),
     fabLabel: const Color(0xffeceefc),
     fabLabelPressed: const Color(0xffeceefc),
     fabShadow: const Color(0xff18171c),
     foreground: const Color(0xffffffff),
-    icon: const Color(0xff7977fe),
-    iconSelected: Colors.white.withValues(alpha: 0.8),
-    labelCounterUnread: const Color(0xffffffff).withValues(alpha: 0.7),
+    icon: Colors.white.withValues(alpha: 0.8),
+    iconSelected: Colors.white,
+    labelCounterUnread: Colors.white,
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 1).toColor(),
-    labelMenuButton: const Color(0xffffffff).withValues(alpha: 0.85),
-    labelSearchPrompt: const Color(0xffffffff).withValues(alpha: 0.5),
-    labelTime: const Color(0xffffffff).withValues(alpha: 0.50),
-    link: const Color(0xff00aaff), // from "Zulip Web UI kit"
+    labelMenuButton: Colors.white,
+    labelSearchPrompt: Colors.white.withValues(alpha: 0.8),
+    labelTime: Colors.white.withValues(alpha: 0.8),
+    link: const Color(0xFF414d75), // Brand blue
     listMenuItemBg: const Color(0xff2d303c),
-    listMenuItemIcon: const Color(0xff767988),
-    listMenuItemText: const Color(0xffcbcdd6),
+    listMenuItemIcon: Colors.white.withValues(alpha: 0.8),
+    listMenuItemText: Colors.white,
 
     // Keep the color here and the corresponding dark mode entry in
     // ios/Runner/Assets.xcassets/LaunchBackground.colorset/Contents.json
@@ -283,7 +413,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     neutralButtonBg: const Color(0xffd4d1e0),
     neutralButtonLabel: const Color(0xffa9a3c2),
     radioBorder: Color(0xff626573),
-    radioFillSelected: Color(0xff4e7cfa),
+    radioFillSelected: Color(0xFF414d75),
     statusAway: Color(0xffabaeba).withValues(alpha: 0.30),
 
     // Following Web because it uses a gradient, to distinguish it by shape from
@@ -294,13 +424,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     textInput: const Color(0xffffffff).withValues(alpha: 0.9),
     title: const Color(0xffffffff).withValues(alpha: 0.9),
     bgSearchInput: const Color(0xff313131),
-    textMessage: const Color(0xffffffff).withValues(alpha: 0.8),
-    textMessageMuted: const Color(0xffffffff).withValues(alpha: 0.5),
+    textMessage: Colors.white,
+    textMessageMuted: Colors.white.withValues(alpha: 0.7),
     channelColorSwatches: ChannelColorSwatches.dark,
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)
     avatarPlaceholderBg: const Color(0x33cccccc),
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)
-    avatarPlaceholderIcon: Colors.white.withValues(alpha: 0.5),
+    avatarPlaceholderIcon: Colors.white.withValues(alpha: 0.8),
     contextMenuCancelBg: const Color(0xff797986).withValues(alpha: 0.15), // the same as the light mode in Figma
     contextMenuCancelPressedBg: const Color(0xff797986).withValues(alpha: 0.20), // the same as the light mode in Figma
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)

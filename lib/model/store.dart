@@ -953,7 +953,7 @@ class LiveGlobalStore extends GlobalStore {
     //     on Android, -> Flutter's PathUtils.getFilesDir -> https://developer.android.com/reference/android/content/Context#getFilesDir()
     //       -> empirically /data/data/com.zulipmobile/files/
     //     on iOS, -> "Library/Application Support" via https://developer.apple.com/documentation/foundation/nssearchpathdirectory/nsapplicationsupportdirectory
-    //     on Linux, -> "${XDG_DATA_HOME:-~/.local/share}/com.zulip.flutter/"
+    //     on Linux, -> "${XDG_DATA_HOME:-~/.local/share}/com.dev.zulip.mobile.xandy/"
     //     All seem reasonable.
     //   path_provider's getApplicationDocumentsDirectory:
     //     on Android, -> Flutter's PathUtils.getDataDirectory -> https://developer.android.com/reference/android/content/Context#getDir(java.lang.String,%20int)
@@ -1120,6 +1120,11 @@ class UpdateMachine {
           case HttpException(httpStatus: 401):
             // We cannot recover from this error through retrying.
             // Leave it to [GlobalStore.loadPerAccount].
+            rethrow;
+          case HttpException(httpStatus: 404):
+            // 404 errors typically indicate the API endpoint is not available,
+            // which could be due to server configuration or version issues.
+            // We cannot recover from this error through retrying.
             rethrow;
           default:
             assert(debugLog('Error fetching initial snapshot: $e'));

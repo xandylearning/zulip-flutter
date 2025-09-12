@@ -453,18 +453,24 @@ class _LoginPageState extends State<LoginPage> {
 
     final externalAuthenticationMethods = widget.serverSettings.externalAuthenticationMethods;
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.brightness == Brightness.dark ? colorScheme.surface : const Color(0xFFF5F7FA),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFFFFF),
-              Color(0xFFF5F7FA),
+            colors: theme.brightness == Brightness.dark ? [
+              colorScheme.surface,
+              colorScheme.surfaceContainer,
+            ] : [
+              const Color(0xFFFFFFFF),
+              const Color(0xFFF5F7FA),
             ],
           ),
         ),
@@ -503,18 +509,18 @@ class _LoginPageState extends State<LoginPage> {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    Color(0xFF6B5FCD),
-                                    Color(0xFF4A90E2),
+                                    Color(0xFF414d75), // Brand blue
+                                    Color(0xFFf05462), // Brand red
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(22),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6B5FCD).withOpacity(0.3),
-                                    blurRadius: 25,
-                                    offset: const Offset(0, 12),
-                                  ),
-                                ],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF414d75).withOpacity(0.3),
+                                      blurRadius: 25,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
                               ),
                               child: SvgPicture.asset(
                                 'assets/app-icons/zulip-white-z-on-transparent.svg',
@@ -541,21 +547,21 @@ class _LoginPageState extends State<LoginPage> {
                             opacity: value,
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Welcome Back',
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1A1F36),
+                                    color: theme.brightness == Brightness.dark ? colorScheme.onSurface : const Color(0xFF1A1F36),
                                     letterSpacing: -0.5,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                const Text(
+                                Text(
                                   'Sign in to continue to X&Y Learning',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Color(0xFF8E95A3),
+                                    color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -566,14 +572,16 @@ class _LoginPageState extends State<LoginPage> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF6B5FCD).withOpacity(0.1),
+                                    color: theme.brightness == Brightness.dark
+                                      ? colorScheme.primary.withOpacity(0.2)
+                                      : const Color(0xFF414d75).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
                                     widget.serverSettings.realmUrl.host,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: Color(0xFF6B5FCD),
+                                      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -602,11 +610,13 @@ class _LoginPageState extends State<LoginPage> {
                           constraints: const BoxConstraints(maxWidth: 400),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: theme.brightness == Brightness.dark ? colorScheme.surfaceContainer : Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
+                                  color: theme.brightness == Brightness.dark
+                                    ? Colors.black.withOpacity(0.3)
+                                    : Colors.black.withOpacity(0.04),
                                   blurRadius: 40,
                                   offset: const Offset(0, 10),
                                 ),
@@ -634,10 +644,10 @@ class _LoginPageState extends State<LoginPage> {
                                               horizontal: 24,
                                               vertical: 18,
                                             ),
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: const Color(0xFF1A1F36),
-                                            side: const BorderSide(
-                                              color: Color(0xFFE5E7EB),
+                                            backgroundColor: theme.brightness == Brightness.dark ? colorScheme.surfaceContainer : Colors.white,
+                                            foregroundColor: theme.brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
+                                            side: BorderSide(
+                                              color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
                                               width: 1.5,
                                             ),
                                             shape: RoundedRectangleBorder(
@@ -646,7 +656,7 @@ class _LoginPageState extends State<LoginPage> {
                                           ),
                                           icon: icon != null
                                               ? Image.network(icon, width: 22, height: 22)
-                                              : const Icon(Icons.login, size: 22, color: Color(0xFF8E95A3)),
+                                              : const Icon(Icons.login, size: 22, color: Color(0xFF414d75)),
                                           onPressed: !_inProgress
                                               ? () => _beginWebAuth(method)
                                               : null,
@@ -673,54 +683,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 40),
 
-                // Progress indicator when logging in
-                if (_inProgress)
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 300),
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 20,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF6B5FCD),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Signing you in...',
-                                    style: TextStyle(
-                                      color: const Color(0xFF1A1F36).withOpacity(0.8),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
               ],
             ),
             ),
@@ -845,18 +807,21 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         return null;
       },
       textInputAction: TextInputAction.next,
-      style: const TextStyle(fontSize: 16),
+      style: TextStyle(
+        fontSize: 16,
+        color: Theme.of(context).brightness == Brightness.dark ? colorScheme.onSurface : null,
+      ),
       decoration: InputDecoration(
         labelText: requireEmailFormatUsernames
           ? zulipLocalizations.loginEmailLabel
           : zulipLocalizations.loginUsernameLabel,
         prefixIcon: Icon(
           requireEmailFormatUsernames ? Icons.email_outlined : Icons.person_outline,
-          color: const Color(0xFF8E95A3),
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           size: 20,
         ),
         filled: true,
-        fillColor: const Color(0xFFF8F9FB),
+        fillColor: Theme.of(context).brightness == Brightness.dark ? colorScheme.surfaceContainerHighest : const Color(0xFFF8F9FB),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -867,7 +832,10 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF6B5FCD), width: 2),
+          borderSide: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
+            width: 2
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -878,12 +846,12 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        labelStyle: const TextStyle(
-          color: Color(0xFF8E95A3),
+        labelStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           fontSize: 15,
         ),
-        floatingLabelStyle: const TextStyle(
-          color: Color(0xFF6B5FCD),
+        floatingLabelStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           fontWeight: FontWeight.w500,
         ),
       ));
@@ -902,12 +870,15 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
       },
       textInputAction: TextInputAction.go,
       onFieldSubmitted: (value) => _submit(),
-      style: const TextStyle(fontSize: 16),
+      style: TextStyle(
+        fontSize: 16,
+        color: Theme.of(context).brightness == Brightness.dark ? colorScheme.onSurface : null,
+      ),
       decoration: InputDecoration(
         labelText: zulipLocalizations.loginPasswordLabel,
-        prefixIcon: const Icon(
+        prefixIcon: Icon(
           Icons.lock_outline,
-          color: Color(0xFF8E95A3),
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           size: 20,
         ),
         suffixIcon: IconButton(
@@ -917,12 +888,12 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
           onPressed: _handlePasswordVisibilityPress,
           icon: Icon(
             _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-            color: const Color(0xFF8E95A3),
+            color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
             size: 20,
           ),
         ),
         filled: true,
-        fillColor: const Color(0xFFF8F9FB),
+        fillColor: Theme.of(context).brightness == Brightness.dark ? colorScheme.surfaceContainerHighest : const Color(0xFFF8F9FB),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -933,7 +904,10 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF6B5FCD), width: 2),
+          borderSide: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
+            width: 2
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -944,12 +918,12 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        labelStyle: const TextStyle(
-          color: Color(0xFF8E95A3),
+        labelStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           fontSize: 15,
         ),
-        floatingLabelStyle: const TextStyle(
-          color: Color(0xFF6B5FCD),
+        floatingLabelStyle: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primary : const Color(0xFF414d75),
           fontWeight: FontWeight.w500,
         ),
       ));
@@ -967,24 +941,39 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
             SizedBox(
               width: double.infinity,
               height: 58,
-              child: ElevatedButton(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: widget.loginPageState._inProgress ? [
+                      const Color(0xFF414d75).withValues(alpha: 0.6), // Brand blue with opacity
+                      const Color(0xFFf05462).withValues(alpha: 0.6), // Brand red with opacity
+                    ] : [
+                      const Color(0xFF414d75), // Brand blue
+                      const Color(0xFFf05462), // Brand red
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ElevatedButton(
                 onPressed: widget.loginPageState._inProgress ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6B5FCD),
+                  backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFF6B5FCD).withOpacity(0.6),
+                  disabledBackgroundColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
                 child: widget.loginPageState._inProgress
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : Text(
@@ -995,6 +984,7 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
                           letterSpacing: 0.5,
                         ),
                       ),
+                ),
               ),
             ),
           ],

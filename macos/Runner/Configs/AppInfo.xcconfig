@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = Zulip
+PRODUCT_NAME = xandy
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.zulip.flutter
+PRODUCT_BUNDLE_IDENTIFIER = com.dev.zulip.mobile.xandy
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2022 Kandra Labs, Inc., and contributors. Licensed under the Apache License, Version 2.0.

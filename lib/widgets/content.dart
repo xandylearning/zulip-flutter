@@ -60,10 +60,10 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       textStyleEmoji: TextStyle(
         fontFamily: emojiFontFamily, fontFamilyFallback: const []),
       codeBlockTextStyles: CodeBlockTextStyles.light(context),
-      textStyleError: const TextStyle(fontSize: kBaseFontSize, color: Colors.red)
+      textStyleError: TextStyle(fontSize: kBaseFontSize, color: Theme.of(context).colorScheme.error)
         .merge(weightVariableTextStyle(context, wght: 700)),
       textStyleErrorCode: kMonospaceTextStyle
-        .merge(const TextStyle(fontSize: kBaseFontSize, color: Colors.red)),
+        .merge(TextStyle(fontSize: kBaseFontSize, color: Theme.of(context).colorScheme.error)),
       textStyleInlineCode: kMonospaceTextStyle.merge(TextStyle(
         backgroundColor: const HSLColor.fromAHSL(0.06, 0, 0, 0).toColor())),
       textStyleInlineMath: kMonospaceTextStyle.merge(TextStyle(
@@ -81,23 +81,23 @@ class ContentTheme extends ThemeExtension<ContentTheme> {
       colorLink: const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor(), // the same as light in Web
       colorMathBlockBorder: const HSLColor.fromAHSL(1, 240, 0.4, 0.4).toColor(),
       colorMessageMediaContainerBackground: const HSLColor.fromAHSL(0.03, 0, 0, 1).toColor(),
-      colorPollNames: const HSLColor.fromAHSL(1, 236, .15, .7).toColor(),
+      colorPollNames: Colors.white,
       colorPollVoteCountBackground: const HSLColor.fromAHSL(0.2, 0, 0, 0).toColor(),
       colorPollVoteCountBorder: const HSLColor.fromAHSL(1, 185, 0.35, 0.35).toColor(),
-      colorPollVoteCountText: const HSLColor.fromAHSL(1, 185, 0.35, 0.65).toColor(),
+      colorPollVoteCountText: Colors.white,
       colorTableCellBorder: const HSLColor.fromAHSL(1, 0, 0, 0.33).toColor(),
       colorTableHeaderBackground: const HSLColor.fromAHSL(0.5, 0, 0, 0).toColor(),
       colorThematicBreak: const HSLColor.fromAHSL(1, 0, 0, .87).toColor().withValues(alpha: 0.2),
       textStylePlainParagraph: _plainParagraphCommon(context).copyWith(
-        color: const HSLColor.fromAHSL(1, 0, 0, 0.85).toColor(),
+        color: Colors.white,
         debugLabel: 'ContentTheme.textStylePlainParagraph'),
       textStyleEmoji: TextStyle(
         fontFamily: emojiFontFamily, fontFamilyFallback: const []),
       codeBlockTextStyles: CodeBlockTextStyles.dark(context),
-      textStyleError: const TextStyle(fontSize: kBaseFontSize, color: Colors.red)
+      textStyleError: TextStyle(fontSize: kBaseFontSize, color: Theme.of(context).colorScheme.error)
         .merge(weightVariableTextStyle(context, wght: 700)),
       textStyleErrorCode: kMonospaceTextStyle
-        .merge(const TextStyle(fontSize: kBaseFontSize, color: Colors.red)),
+        .merge(TextStyle(fontSize: kBaseFontSize, color: Theme.of(context).colorScheme.error)),
       textStyleInlineCode: kMonospaceTextStyle.merge(TextStyle(
         backgroundColor: const HSLColor.fromAHSL(0.08, 0, 0, 1).toColor())),
       textStyleInlineMath: kMonospaceTextStyle.merge(TextStyle(

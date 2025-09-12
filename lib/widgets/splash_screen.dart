@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../api/route/realm.dart';
 import '../model/server_support.dart';
 import 'home.dart';
@@ -176,13 +175,14 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
 
       // Show error in a beautiful way
+      final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Unable to connect to server'),
-          backgroundColor: Colors.red.shade400,
+          backgroundColor: colorScheme.error,
           action: SnackBarAction(
             label: 'Retry',
-            textColor: Colors.white,
+            textColor: colorScheme.onError,
             onPressed: _connectToHardcodedServer,
           ),
         ),
@@ -208,9 +208,16 @@ class _SplashScreenState extends State<SplashScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF6B5FCD), // Purple
-              Color(0xFF4A90E2), // Blue
+              Color(0xFFf5c02d), // Yellow from gradient
+              Color(0xFFf3a937), // Orange-yellow
+              Color(0xFFf28e44), // Orange
+              Color(0xFFf1784f), // Red-orange
+              Color(0xFFf06757), // Red-orange
+              Color(0xFFef5b5c), // Red
+              Color(0xFFef5460), // Red
+              Color(0xFFef5361), // Red from gradient
             ],
+            stops: [0.0, 0.05, 0.12, 0.2, 0.29, 0.41, 0.57, 1.0],
           ),
         ),
         child: Stack(
@@ -269,12 +276,10 @@ class _SplashScreenState extends State<SplashScreen>
                                 ),
                               ],
                             ),
-                            child: SvgPicture.asset(
-                              'assets/app-icons/zulip-white-z-on-transparent.svg',
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF6B5FCD),
-                                BlendMode.srcIn,
-                              ),
+                            child: Image.asset(
+                              'assets/app-icons/zulip-combined.png',
+                              width: 60,
+                              height: 60,
                             ),
                           ),
                         ),
@@ -294,7 +299,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Column(
                         children: [
                           const Text(
-                            'Zulip',
+                            'XandY',
                             style: TextStyle(
                               fontSize: 42,
                               fontWeight: FontWeight.bold,

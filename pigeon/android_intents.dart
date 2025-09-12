@@ -4,9 +4,9 @@ import 'package:pigeon/pigeon.dart';
 // run `tools/check pigeon --fix`.
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/host/android_intents.g.dart',
-  kotlinOut: 'android/app/src/main/kotlin/com/zulip/flutter/AndroidIntents.g.kt',
+  kotlinOut: 'android/app/src/main/kotlin/com/dev/zulip/mobile/xandy/AndroidIntents.g.kt',
   kotlinOptions: KotlinOptions(
-    package: 'com.zulip.flutter',
+    package: 'com.dev.zulip.mobile.xandy',
     // One error class is already generated in AndroidNotifications.g.kt ,
     // so avoid generating another one, preventing duplicate classes under
     // the same namespace.

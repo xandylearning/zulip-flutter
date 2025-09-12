@@ -239,7 +239,7 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/app-icons/zulip-combined.png"
     background_color: "#FFFFFF"
-    theme_color: "#6B5FCD"
+    theme_color: "#414d75"
   windows:
     generate: true
     image_path: "assets/app-icons/zulip-combined.png"

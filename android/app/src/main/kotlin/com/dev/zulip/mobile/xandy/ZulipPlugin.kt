@@ -1,4 +1,4 @@
-package com.zulip.flutter
+package com.dev.zulip.mobile.xandy
 
 import android.annotation.SuppressLint
 import android.content.ContentUris

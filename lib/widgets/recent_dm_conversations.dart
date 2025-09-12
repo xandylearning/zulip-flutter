@@ -256,15 +256,7 @@ class _NewDmButtonState extends State<_NewDmButton> {
 
   @override
   Widget build(BuildContext context) {
-    final designVariables = DesignVariables.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
-
-    final fabBgColor = _pressed
-      ? designVariables.fabBgPressed
-      : designVariables.fabBg;
-    final fabLabelColor = _pressed
-      ? designVariables.fabLabelPressed
-      : designVariables.fabLabel;
 
     return GestureDetector(
       onTap: () => showNewDmSheet(context, widget.onDmSelect),
@@ -276,10 +268,20 @@ class _NewDmButtonState extends State<_NewDmButton> {
         curve: Curves.easeOut,
         padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 20, 12),
         decoration: BoxDecoration(
-          color: fabBgColor,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _pressed ? [
+              const Color(0xFF414d75).withValues(alpha: 0.8), // Brand blue with opacity
+              const Color(0xFFf05462).withValues(alpha: 0.8), // Brand red with opacity
+            ] : [
+              const Color(0xFF414d75), // Brand blue
+              const Color(0xFFf05462), // Brand red
+            ],
+          ),
           borderRadius: BorderRadius.circular(28),
           boxShadow: [BoxShadow(
-            color: designVariables.fabShadow,
+            color: const Color(0xFF414d75).withValues(alpha: 0.3),
             blurRadius: _pressed ? 12 : 16,
             offset: _pressed
               ? const Offset(0, 2)
@@ -288,14 +290,14 @@ class _NewDmButtonState extends State<_NewDmButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(ZulipIcons.plus, size: 24, color: fabLabelColor),
+            Icon(ZulipIcons.plus, size: 24, color: Colors.white),
             const SizedBox(width: 8),
             Text(
               zulipLocalizations.newDmFabButtonLabel,
               style: TextStyle(
                 fontSize: 20,
                 height: 24 / 20,
-                color: fabLabelColor,
+                color: Colors.white,
               ).merge(weightVariableTextStyle(context, wght: 500))),
           ])));
   }

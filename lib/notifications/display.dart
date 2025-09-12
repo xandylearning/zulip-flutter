@@ -180,13 +180,20 @@ class NotificationChannelManager {
     // See if our current-version channel already exists; delete any obsolete
     // previous channels.
     var found = false;
-    final channels = await _androidHost.getNotificationChannels();
-    for (final channel in channels) {
-      if (channel.id == kChannelId) {
-        found = true;
-      } else {
-        await _androidHost.deleteNotificationChannel(channel.id);
+    try {
+      final channels = await _androidHost.getNotificationChannels();
+      for (final channel in channels) {
+        if (channel.id == kChannelId) {
+          found = true;
+        } else {
+          await _androidHost.deleteNotificationChannel(channel.id);
+        }
       }
+    } catch (e) {
+      // If we can't get notification channels, assume no channels exist
+      // and proceed to create the channel
+      debugLog('Failed to get notification channels: $e');
+      found = false;
     }
 
     if (found) {
@@ -196,16 +203,21 @@ class NotificationChannelManager {
 
     // The channel doesn't exist. Create it.
 
-    final defaultSoundUrl = await _ensureInitNotificationSounds();
+    try {
+      final defaultSoundUrl = await _ensureInitNotificationSounds();
 
-    await _androidHost.createNotificationChannel(NotificationChannel(
-      id: kChannelId,
-      name: 'Messages', // TODO(#1284)
-      importance: NotificationImportance.high,
-      lightsEnabled: true,
-      soundUrl: defaultSoundUrl,
-      vibrationPattern: kVibrationPattern,
-    ));
+      await _androidHost.createNotificationChannel(NotificationChannel(
+        id: kChannelId,
+        name: 'Messages', // TODO(#1284)
+        importance: NotificationImportance.high,
+        lightsEnabled: true,
+        soundUrl: defaultSoundUrl,
+        vibrationPattern: kVibrationPattern,
+      ));
+    } catch (e) {
+      // If we can't create the notification channel, log the error but don't crash
+      debugLog('Failed to create notification channel: $e');
+    }
   }
 }
 
