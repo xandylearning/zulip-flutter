@@ -66,6 +66,7 @@ dependencies:
   zulip_plugin:
     path: ./packages/zulip_plugin
   unorm_dart: ^0.3.1+1
+  flutter_svg: ^2.2.1
   # Keep list sorted when adding dependencies; it helps prevent merge conflicts.
 
 dependency_overrides:
@@ -108,6 +109,7 @@ dev_dependencies:
   test: ^1.23.1
   test_api: ^0.7.3
   video_player_platform_interface: ^6.2.2
+  flutter_launcher_icons: ^0.14.4
   # Keep list sorted when adding dependencies; it helps prevent merge conflicts.
 
 flutter:
@@ -115,6 +117,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/app-icons/
     - assets/KaTeX/LICENSE
     - assets/Noto_Color_Emoji/LICENSE
     - assets/Pygments/AUTHORS.txt
@@ -225,3 +228,22 @@ flutter:
         - asset: assets/icons/ZulipIcons.ttf
 
     # If adding a font, remember to account for its license in lib/licenses.dart.
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/app-icons/zulip-combined.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/app-icons/zulip-combined.png"
+    background_color: "#FFFFFF"
+    theme_color: "#6B5FCD"
+  windows:
+    generate: true
+    image_path: "assets/app-icons/zulip-combined.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/app-icons/zulip-combined.png"

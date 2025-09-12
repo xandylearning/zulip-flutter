@@ -15,6 +15,7 @@ import 'dialog.dart';
 import 'home.dart';
 import 'login.dart';
 import 'page.dart';
+import 'splash_screen.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -210,14 +211,9 @@ class _ZulipAppState extends State<ZulipApp> with WidgetsBindingObserver {
       ];
     }
 
-    final globalStore = GlobalStoreWidget.of(context);
-    // TODO(#524) choose initial account as last one used
-    final initialAccountId = globalStore.accounts.firstOrNull?.id;
+    // Always show splash screen first
     return [
-      if (initialAccountId == null)
-        MaterialWidgetRoute(page: const ChooseAccountPage())
-      else
-        HomePage.buildRoute(accountId: initialAccountId),
+      MaterialWidgetRoute(page: const SplashScreen()),
     ];
   }
 
@@ -290,7 +286,7 @@ class _PreventEmptyStack extends NavigatorObserver {
     });
     if (isEmptyStack) {
       unawaited(navigator.push(
-        MaterialWidgetRoute(page: const ChooseAccountPage())));
+        MaterialWidgetRoute(page: const SplashScreen())));
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/core.dart';
@@ -21,8 +22,6 @@ import 'home.dart';
 import 'input.dart';
 import 'page.dart';
 import 'store.dart';
-import 'text.dart';
-import 'theme.dart';
 
 class _LoginSequenceRoute extends MaterialWidgetRoute<void> {
   _LoginSequenceRoute({
@@ -450,52 +449,285 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     assert(!PerAccountStoreWidget.debugExistsOf(context));
-    final colorScheme = Theme.of(context).colorScheme;
     final zulipLocalizations = ZulipLocalizations.of(context);
 
     final externalAuthenticationMethods = widget.serverSettings.externalAuthenticationMethods;
 
-    final loginForm = Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFFFFF),
+              Color(0xFFF5F7FA),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height -
+                          MediaQuery.of(context).padding.top -
+                          MediaQuery.of(context).padding.bottom - 48,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                const SizedBox(height: 40),
+
+                // Logo and welcome section
+                Column(
+                  children: [
+                    // Logo with animation
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 800),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: 0.8 + (0.2 * value),
+                          child: Opacity(
+                            opacity: value,
+                            child: Container(
+                              width: 90,
+                              height: 90,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF6B5FCD),
+                                    Color(0xFF4A90E2),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF6B5FCD).withOpacity(0.3),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: SvgPicture.asset(
+                                'assets/app-icons/zulip-white-z-on-transparent.svg',
+                                colorFilter: const ColorFilter.mode(
+                                  Colors.white,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Welcome text
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1000),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.translate(
+                          offset: Offset(0, 20 * (1 - value)),
+                          child: Opacity(
+                            opacity: value,
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Welcome Back',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A1F36),
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Sign in to continue to X&Y Learning',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color(0xFF8E95A3),
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6B5FCD).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    widget.serverSettings.realmUrl.host,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF6B5FCD),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 40),
+
+                // Login form with animation
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 1200),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, 30 * (1 - value)),
+                      child: Opacity(
+                        opacity: value,
+                          child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 400),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
       _UsernamePasswordForm(loginPageState: this),
+
       if (externalAuthenticationMethods.isNotEmpty) ...[
+                                    const SizedBox(height: 24),
         const OrDivider(),
+                                    const SizedBox(height: 16),
         ...externalAuthenticationMethods.map((method) {
           final icon = method.displayIcon;
-          return OutlinedButton.icon(
-            style: ButtonStyle(
-              backgroundColor: WidgetStatePropertyAll(colorScheme.secondaryContainer),
-              foregroundColor: WidgetStatePropertyAll(colorScheme.onSecondaryContainer)),
-            icon: icon != null
-              ? Image.network(icon, width: 24, height: 24)
-              : null,
-            onPressed: !_inProgress
-              ? () => _beginWebAuth(method)
-              : null,
-            label: Text(
-              zulipLocalizations.signInWithFoo(method.displayName)));
+                                      return Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(bottom: 12),
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 18,
+                                            ),
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: const Color(0xFF1A1F36),
+                                            side: const BorderSide(
+                                              color: Color(0xFFE5E7EB),
+                                              width: 1.5,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                          icon: icon != null
+                                              ? Image.network(icon, width: 22, height: 22)
+                                              : const Icon(Icons.login, size: 22, color: Color(0xFF8E95A3)),
+                                          onPressed: !_inProgress
+                                              ? () => _beginWebAuth(method)
+                                              : null,
+                                          label: Text(
+                                            zulipLocalizations.signInWithFoo(method.displayName),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      );
         }),
       ],
-    ]);
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
 
-    return Scaffold(
-      appBar: AppBar(title: Text(zulipLocalizations.loginPageTitle),
-        bottom: _inProgress
-          ? const PreferredSize(preferredSize: Size.fromHeight(4),
-              child: LinearProgressIndicator(minHeight: 4)) // 4 restates default
-          : null),
-      body: SafeArea(
-        minimum: const EdgeInsets.symmetric(horizontal: 8),
-        bottom: false,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(top: 8),
-            child: SafeArea(
-              minimum: const EdgeInsets.only(bottom: 8),
-              // TODO also detect vertical scroll gestures that start on the
-              //   left or the right of this box
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: loginForm))))));
+                const SizedBox(height: 40),
+
+                // Progress indicator when logging in
+                if (_inProgress)
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 300),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 20,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF6B5FCD),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Signing you in...',
+                                    style: TextStyle(
+                                      color: const Color(0xFF1A1F36).withOpacity(0.8),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -590,6 +822,7 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
     assert(!PerAccountStoreWidget.debugExistsOf(context));
     final serverSettings = widget.loginPageState.widget.serverSettings;
     final zulipLocalizations = ZulipLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final requireEmailFormatUsernames = serverSettings.requireEmailFormatUsernames;
 
     final usernameField = TextFormField(
@@ -599,8 +832,6 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         AutofillHints.email,
       ],
       keyboardType: TextInputType.emailAddress,
-      // TODO(upstream?): Apparently pressing "next" doesn't count
-      //   as user interaction, and validation isn't done.
       autovalidateMode: AutovalidateMode.onUserInteraction,
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
@@ -614,11 +845,47 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
         return null;
       },
       textInputAction: TextInputAction.next,
+      style: const TextStyle(fontSize: 16),
       decoration: InputDecoration(
         labelText: requireEmailFormatUsernames
           ? zulipLocalizations.loginEmailLabel
           : zulipLocalizations.loginUsernameLabel,
-        helperText: kLayoutPinningHelperText,
+        prefixIcon: Icon(
+          requireEmailFormatUsernames ? Icons.email_outlined : Icons.person_outline,
+          color: const Color(0xFF8E95A3),
+          size: 20,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8F9FB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF6B5FCD), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        labelStyle: const TextStyle(
+          color: Color(0xFF8E95A3),
+          fontSize: 15,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF6B5FCD),
+          fontWeight: FontWeight.w500,
+        ),
       ));
 
     final passwordField = TextFormField(
@@ -635,29 +902,105 @@ class _UsernamePasswordFormState extends State<_UsernamePasswordForm> {
       },
       textInputAction: TextInputAction.go,
       onFieldSubmitted: (value) => _submit(),
+      style: const TextStyle(fontSize: 16),
       decoration: InputDecoration(
         labelText: zulipLocalizations.loginPasswordLabel,
-        helperText: kLayoutPinningHelperText,
+        prefixIcon: const Icon(
+          Icons.lock_outline,
+          color: Color(0xFF8E95A3),
+          size: 20,
+        ),
         suffixIcon: IconButton(
-          tooltip: zulipLocalizations.loginHidePassword,
+          tooltip: _obscurePassword
+              ? 'Show password'
+              : zulipLocalizations.loginHidePassword,
           onPressed: _handlePasswordVisibilityPress,
-          icon: const Icon(Icons.visibility),
-          isSelected: _obscurePassword,
-          selectedIcon: const Icon(Icons.visibility_off),
-        )));
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            color: const Color(0xFF8E95A3),
+            size: 20,
+          ),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8F9FB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF6B5FCD), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colorScheme.error, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        labelStyle: const TextStyle(
+          color: Color(0xFF8E95A3),
+          fontSize: 15,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF6B5FCD),
+          fontWeight: FontWeight.w500,
+        ),
+      ));
 
     return Form(
       // TODO(#110) Try to highlight CZO / Zulip Cloud realms in autofill
       child: AutofillGroup(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          usernameField,
-          const SizedBox(height: 8),
-          passwordField,
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: widget.loginPageState._inProgress ? null : _submit,
-            child: Text(zulipLocalizations.loginFormSubmitLabel)),
-        ])));
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            usernameField,
+            const SizedBox(height: 20),
+            passwordField,
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 58,
+              child: ElevatedButton(
+                onPressed: widget.loginPageState._inProgress ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B5FCD),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFF6B5FCD).withOpacity(0.6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                child: widget.loginPageState._inProgress
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        zulipLocalizations.loginFormSubmitLabel,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -668,24 +1011,36 @@ class OrDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zulipLocalizations = ZulipLocalizations.of(context);
-    final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     final divider = Expanded(
-      child: Divider(color: designVariables.loginOrDivider, thickness: 2));
+      child: Container(
+        height: 1,
+        color: colorScheme.outline.withOpacity(0.3),
+      ),
+    );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        divider,
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: Text(zulipLocalizations.loginMethodDivider,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: designVariables.loginOrDividerText,
-              height: 1.5,
-            ).merge(weightVariableTextStyle(context, wght: 600)))),
-        divider,
-      ]));
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          divider,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              zulipLocalizations.loginMethodDivider,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          divider,
+        ],
+      ),
+    );
   }
 }
