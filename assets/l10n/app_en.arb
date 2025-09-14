@@ -72,6 +72,34 @@
   "@chooseAccountButtonAddAnAccount": {
     "description": "Label for ChooseAccountPage button to add an account"
   },
+  "callsPageTitle": "Calls",
+  "@callsPageTitle": {
+    "description": "Title for the calls page."
+  },
+  "chatsPageTitle": "Chats",
+  "@chatsPageTitle": {
+    "description": "Title for the chats page."
+  },
+  "callLogTabTitle": "Call log",
+  "@callLogTabTitle": {
+    "description": "Title for the call log tab."
+  },
+  "contactsTabTitle": "Contacts",
+  "@contactsTabTitle": {
+    "description": "Title for the contacts tab."
+  },
+  "callLogEmptyPlaceholder": "No call history yet",
+  "@callLogEmptyPlaceholder": {
+    "description": "Placeholder text when call log is empty."
+  },
+  "contactsEmptyPlaceholder": "No contacts found",
+  "@contactsEmptyPlaceholder": {
+    "description": "Placeholder text when contacts list is empty."
+  },
+  "chatsEmptyPlaceholder": "No conversations yet. Start a new chat!",
+  "@chatsEmptyPlaceholder": {
+    "description": "Placeholder text when chats list is empty."
+  },
   "profileButtonSendDirectMessage": "Send direct message",
   "@profileButtonSendDirectMessage": {
     "description": "Label for button in profile screen to navigate to DMs with the shown user."
@@ -1346,5 +1374,34 @@
   "zulipAppTitle": "Zulip",
   "@zulipAppTitle": {
     "description": "The name of Zulip. This should be either 'Zulip' or a transliteration."
+  },
+
+  "callsPageTitle": "Calls",
+  "@callsPageTitle": {
+    "description": "Title for the calls page in WhatsApp-like navigation."
+  },
+  "chatsPageTitle": "Chats",
+  "@chatsPageTitle": {
+    "description": "Title for the chats page in WhatsApp-like navigation."
+  },
+  "callLogTabTitle": "Call log",
+  "@callLogTabTitle": {
+    "description": "Title for the call log tab in the calls page."
+  },
+  "contactsTabTitle": "Contacts",
+  "@contactsTabTitle": {
+    "description": "Title for the contacts tab in the calls page."
+  },
+  "callLogEmptyPlaceholder": "No recent calls",
+  "@callLogEmptyPlaceholder": {
+    "description": "Empty state message for call log when there are no calls."
+  },
+  "contactsEmptyPlaceholder": "No contacts found",
+  "@contactsEmptyPlaceholder": {
+    "description": "Empty state message for contacts when there are no users."
+  },
+  "chatsEmptyPlaceholder": "No conversations yet. Start a new chat!",
+  "@chatsEmptyPlaceholder": {
+    "description": "Empty state message for chats page when there are no conversations."
   }
 }

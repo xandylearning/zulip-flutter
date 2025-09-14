@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
+import '../model/settings.dart';
 import 'about_zulip.dart';
 import 'action_sheet.dart';
 import 'app.dart';
 import 'app_bar.dart';
 import 'button.dart';
+import 'calls.dart';
+import 'chats.dart';
 import 'color.dart';
 import 'icons.dart';
 import 'inbox.dart';
@@ -25,9 +28,9 @@ import 'theme.dart';
 import 'user.dart';
 
 enum _HomePageTab {
-  inbox,
-  channels,
-  directMessages,
+  chats,
+  calls,
+  settings,
 }
 
 class HomePage extends StatefulWidget {
@@ -52,7 +55,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final _tab = ValueNotifier(_HomePageTab.inbox);
+  late final _tab = ValueNotifier(_HomePageTab.chats);
 
   @override
   void initState() {
@@ -75,22 +78,21 @@ class _HomePageState extends State<HomePage> {
   String get _currentTabTitle {
     final zulipLocalizations = ZulipLocalizations.of(context);
     switch(_tab.value) {
-      case _HomePageTab.inbox:
-        return zulipLocalizations.inboxPageTitle;
-      case _HomePageTab.channels:
-        return zulipLocalizations.channelsPageTitle;
-      case _HomePageTab.directMessages:
-        return zulipLocalizations.recentDmConversationsPageTitle;
+      case _HomePageTab.chats:
+        return zulipLocalizations.chatsPageTitle;
+      case _HomePageTab.calls:
+        return zulipLocalizations.callsPageTitle;
+      case _HomePageTab.settings:
+        return zulipLocalizations.settingsPageTitle;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const pageBodies = [
-      (_HomePageTab.inbox,          InboxPageBody()),
-      (_HomePageTab.channels,       SubscriptionListPageBody()),
-      // TODO(#1094): Users
-      (_HomePageTab.directMessages, RecentDmConversationsPageBody()),
+      (_HomePageTab.chats,    ChatsPageBody()),
+      (_HomePageTab.calls,    CallsPageBody()),
+      (_HomePageTab.settings, _SettingsPageBody()),
     ];
 
     _NavigationBarButton button(_HomePageTab tab, IconData icon) {
@@ -101,26 +103,35 @@ class _HomePageState extends State<HomePage> {
         });
     }
 
-    // TODO(a11y): add tooltips for these buttons
+    // Simple 3-tab navigation for WhatsApp-like interface
     final navigationBarButtons = [
-      button(_HomePageTab.inbox,          ZulipIcons.inbox),
-      _NavigationBarButton(         icon: ZulipIcons.message_feed,
-        selected: false,
-        onPressed: () => Navigator.push(context,
-          MessageListPage.buildRoute(context: context,
-            narrow: const CombinedFeedNarrow()))),
-      button(_HomePageTab.channels,       ZulipIcons.hash_italic),
-      // TODO(#1094): Users
-      button(_HomePageTab.directMessages, ZulipIcons.two_person),
-      _NavigationBarButton(         icon: ZulipIcons.menu,
-        selected: false,
-        onPressed: () => _showMainMenu(context, tabNotifier: _tab)),
+      button(_HomePageTab.chats,    Icons.chat_bubble_outline), // More universally recognized chat icon
+      button(_HomePageTab.calls,    Icons.phone_outlined),       // Clear phone icon for calls
+      button(_HomePageTab.settings, Icons.settings_outlined),    // Standard settings icon
     ];
 
     final designVariables = DesignVariables.of(context);
     return Scaffold(
       appBar: ZulipAppBar(titleSpacing: 16,
-        title: Text(_currentTabTitle)),
+        title: Text(_currentTabTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: GestureDetector(
+              onTap: () {
+                final store = PerAccountStoreWidget.of(context);
+                Navigator.push(context,
+                  ProfilePage.buildRoute(context: context, userId: store.selfUserId));
+              },
+              child: Avatar(
+                userId: PerAccountStoreWidget.of(context).selfUserId,
+                size: 32,
+                borderRadius: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           for (final (tab, body) in pageBodies)
@@ -129,12 +140,14 @@ class _HomePageState extends State<HomePage> {
             //   for screen-reader software.
             Offstage(offstage: tab != _tab.value, child: body),
         ]),
-      bottomNavigationBar: DecoratedBox(
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: designVariables.borderBar)),
-          color: designVariables.bgBotBar),
+          color: designVariables.bgBotBar,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         child: SafeArea(
-          child: SizedBox(height: 48,
+          child: SizedBox(height: 68,
             child: Center(
               child: ConstrainedBox(
                 // TODO(design): determine a suitable max width for bottom nav bar
@@ -464,7 +477,7 @@ class _InboxButton extends _NavigationBarMenuButton {
   }
 
   @override
-  _HomePageTab get navigationTarget => _HomePageTab.inbox;
+  _HomePageTab get navigationTarget => _HomePageTab.chats;
 }
 
 class _MentionsButton extends _MenuButton {
@@ -533,7 +546,7 @@ class _ChannelsButton extends _NavigationBarMenuButton {
   }
 
   @override
-  _HomePageTab get navigationTarget => _HomePageTab.channels;
+  _HomePageTab get navigationTarget => _HomePageTab.chats;
 }
 
 class _DirectMessagesButton extends _NavigationBarMenuButton {
@@ -548,7 +561,7 @@ class _DirectMessagesButton extends _NavigationBarMenuButton {
   }
 
   @override
-  _HomePageTab get navigationTarget => _HomePageTab.directMessages;
+  _HomePageTab get navigationTarget => _HomePageTab.chats;
 }
 
 class _MyProfileButton extends _MenuButton {
@@ -629,5 +642,484 @@ class _AboutZulipButton extends _MenuButton {
   @override
   void onPressed(BuildContext context) {
     Navigator.of(context).push(AboutZulipPage.buildRoute(context));
+  }
+}
+
+// Comprehensive WhatsApp-like settings page embedded in navigation
+class _SettingsPageBody extends StatelessWidget {
+  const _SettingsPageBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    final designVariables = DesignVariables.of(context);
+    final store = PerAccountStoreWidget.of(context);
+    final globalSettings = GlobalStoreWidget.settingsOf(context);
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      children: [
+        // Profile Section
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: designVariables.bgTopBar,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => Navigator.push(context,
+              ProfilePage.buildRoute(context: context, userId: store.selfUserId)),
+            child: Row(
+              children: [
+                Avatar(
+                  userId: store.selfUserId,
+                  size: 60,
+                  borderRadius: 30,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        store.selfUser.fullName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        store.selfUser.email,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: designVariables.labelMenuButton.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  ZulipIcons.chevron_right,
+                  color: designVariables.labelMenuButton.withOpacity(0.6),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Settings Sections
+        _SettingsSection(
+          title: 'Appearance',
+          children: [
+            _SettingsTile(
+              icon: ZulipIcons.language,
+              title: 'Theme',
+              subtitle: _getThemeDisplayName(globalSettings.themeSetting, zulipLocalizations),
+              onTap: () => _showThemeSelector(context),
+            ),
+          ],
+        ),
+
+        _SettingsSection(
+          title: 'Chat',
+          children: [
+            _SettingsSwitchTile(
+              icon: ZulipIcons.link,
+              title: 'Open links in app',
+              subtitle: 'Use in-app browser for external links',
+              value: globalSettings.effectiveBrowserPreference == BrowserPreference.inApp,
+              onChanged: (value) => _handleBrowserPreferenceChange(context, value),
+            ),
+            _SettingsTile(
+              icon: ZulipIcons.message_feed,
+              title: 'Mark messages as read',
+              subtitle: _getMarkReadDisplayName(globalSettings.markReadOnScroll, zulipLocalizations),
+              onTap: () => _showMarkReadSelector(context),
+            ),
+            _SettingsTile(
+              icon: ZulipIcons.inbox,
+              title: 'Message feed position',
+              subtitle: _getVisitFirstUnreadDisplayName(globalSettings.visitFirstUnread, zulipLocalizations),
+              onTap: () => _showInitialPositionSelector(context),
+            ),
+          ],
+        ),
+
+        _SettingsSection(
+          title: 'Account',
+          children: [
+            _SettingsTile(
+              icon: ZulipIcons.arrow_left_right,
+              title: 'Switch account',
+              subtitle: 'Switch to another Zulip account',
+              onTap: () => Navigator.push(context,
+                MaterialWidgetRoute(page: const ChooseAccountPage())),
+            ),
+          ],
+        ),
+
+        _SettingsSection(
+          title: 'About',
+          children: [
+            _SettingsTile(
+              icon: ZulipIcons.settings,
+              title: 'Advanced settings',
+              subtitle: 'More configuration options',
+              onTap: () => Navigator.push(context,
+                SettingsPage.buildRoute(context: context)),
+            ),
+            _SettingsTile(
+              icon: ZulipIcons.info,
+              title: 'About Zulip',
+              subtitle: 'App version and information',
+              onTap: () => Navigator.push(context,
+                AboutZulipPage.buildRoute(context)),
+            ),
+            if (GlobalSettingsStore.experimentalFeatureFlags.isNotEmpty)
+              _SettingsTile(
+                icon: ZulipIcons.inherit,
+                title: 'Experimental features',
+                subtitle: 'Developer options and beta features',
+                onTap: () => Navigator.push(context,
+                  ExperimentalFeaturesPage.buildRoute()),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _getThemeDisplayName(ThemeSetting? themeSetting, ZulipLocalizations zulipLocalizations) {
+    return ThemeSetting.displayName(
+      themeSetting: themeSetting,
+      zulipLocalizations: zulipLocalizations,
+    );
+  }
+
+  String _getMarkReadDisplayName(MarkReadOnScrollSetting setting, ZulipLocalizations zulipLocalizations) {
+    return switch (setting) {
+      MarkReadOnScrollSetting.always => 'Always',
+      MarkReadOnScrollSetting.conversations => 'In conversations only',
+      MarkReadOnScrollSetting.never => 'Never',
+    };
+  }
+
+  String _getVisitFirstUnreadDisplayName(VisitFirstUnreadSetting setting, ZulipLocalizations zulipLocalizations) {
+    return switch (setting) {
+      VisitFirstUnreadSetting.always => 'First unread',
+      VisitFirstUnreadSetting.conversations => 'First unread in conversations',
+      VisitFirstUnreadSetting.never => 'Newest message',
+    };
+  }
+
+  void _handleBrowserPreferenceChange(BuildContext context, bool value) {
+    final globalSettings = GlobalStoreWidget.settingsOf(context);
+    globalSettings.setBrowserPreference(
+      value ? BrowserPreference.inApp : BrowserPreference.external,
+    );
+  }
+
+  void _showThemeSelector(BuildContext context) {
+    final globalSettings = GlobalStoreWidget.settingsOf(context);
+    final zulipLocalizations = ZulipLocalizations.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _SettingsBottomSheet(
+        title: 'Theme',
+        children: [
+          for (final themeOption in [null, ...ThemeSetting.values])
+            RadioListTile<ThemeSetting?>(
+              title: Text(ThemeSetting.displayName(
+                themeSetting: themeOption,
+                zulipLocalizations: zulipLocalizations,
+              )),
+              value: themeOption,
+              groupValue: globalSettings.themeSetting,
+              onChanged: (value) {
+                globalSettings.setThemeSetting(value);
+                Navigator.pop(context);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showMarkReadSelector(BuildContext context) {
+    final globalSettings = GlobalStoreWidget.settingsOf(context);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _SettingsBottomSheet(
+        title: 'Mark messages as read',
+        children: [
+          for (final setting in MarkReadOnScrollSetting.values)
+            RadioListTile<MarkReadOnScrollSetting>(
+              title: Text(_getMarkReadDisplayName(setting, ZulipLocalizations.of(context))),
+              subtitle: _getMarkReadDescription(setting),
+              value: setting,
+              groupValue: globalSettings.markReadOnScroll,
+              onChanged: (value) {
+                if (value != null) {
+                  globalSettings.setMarkReadOnScroll(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showInitialPositionSelector(BuildContext context) {
+    final globalSettings = GlobalStoreWidget.settingsOf(context);
+    final zulipLocalizations = ZulipLocalizations.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _SettingsBottomSheet(
+        title: 'Message feed position',
+        children: [
+          for (final setting in VisitFirstUnreadSetting.values)
+            RadioListTile<VisitFirstUnreadSetting>(
+              title: Text(_getVisitFirstUnreadDisplayName(setting, zulipLocalizations)),
+              value: setting,
+              groupValue: globalSettings.visitFirstUnread,
+              onChanged: (value) {
+                if (value != null) {
+                  globalSettings.setVisitFirstUnread(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _getMarkReadDescription(MarkReadOnScrollSetting setting) {
+    return switch (setting) {
+      MarkReadOnScrollSetting.conversations => const Text(
+        'Only in single topic or DM conversations',
+        style: TextStyle(fontSize: 12),
+      ),
+      _ => null,
+    };
+  }
+}
+
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: designVariables.labelMenuButton.withOpacity(0.6),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: designVariables.bgTopBar,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              for (int i = 0; i < children.length; i++) ...[
+                children[i],
+                if (i < children.length - 1)
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    color: designVariables.borderBar.withOpacity(0.3),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF414d75).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: const Color(0xFF414d75),
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 14,
+          color: designVariables.labelMenuButton.withOpacity(0.7),
+        ),
+      ),
+      trailing: Icon(
+        ZulipIcons.chevron_right,
+        size: 16,
+        color: designVariables.labelMenuButton.withOpacity(0.6),
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+class _SettingsSwitchTile extends StatelessWidget {
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF414d75).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: const Color(0xFF414d75),
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 14,
+          color: designVariables.labelMenuButton.withOpacity(0.7),
+        ),
+      ),
+      trailing: Switch.adaptive(
+        value: value,
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _SettingsBottomSheet extends StatelessWidget {
+  const _SettingsBottomSheet({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    return Container(
+      padding: const EdgeInsets.only(top: 16, bottom: 16),
+      decoration: BoxDecoration(
+        color: designVariables.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 4,
+            decoration: BoxDecoration(
+              color: designVariables.labelMenuButton.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
   }
 }

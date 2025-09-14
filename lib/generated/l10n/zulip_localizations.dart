@@ -239,6 +239,48 @@ abstract class ZulipLocalizations {
   /// **'Add an account'**
   String get chooseAccountButtonAddAnAccount;
 
+  /// Title for the calls page in WhatsApp-like navigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls'**
+  String get callsPageTitle;
+
+  /// Title for the chats page in WhatsApp-like navigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get chatsPageTitle;
+
+  /// Title for the call log tab in the calls page.
+  ///
+  /// In en, this message translates to:
+  /// **'Call log'**
+  String get callLogTabTitle;
+
+  /// Title for the contacts tab in the calls page.
+  ///
+  /// In en, this message translates to:
+  /// **'Contacts'**
+  String get contactsTabTitle;
+
+  /// Empty state message for call log when there are no calls.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent calls'**
+  String get callLogEmptyPlaceholder;
+
+  /// Empty state message for contacts when there are no users.
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts found'**
+  String get contactsEmptyPlaceholder;
+
+  /// Empty state message for chats page when there are no conversations.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet. Start a new chat!'**
+  String get chatsEmptyPlaceholder;
+
   /// Label for button in profile screen to navigate to DMs with the shown user.
   ///
   /// In en, this message translates to:

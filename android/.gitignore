@@ -12,3 +12,4 @@ GeneratedPluginRegistrant.java
 *.keystore
 *.keystore.pgp
 *.jks
+key.properties

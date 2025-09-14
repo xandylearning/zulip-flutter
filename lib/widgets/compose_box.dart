@@ -1248,7 +1248,14 @@ class _SendButton extends StatefulWidget {
   State<_SendButton> createState() => _SendButtonState();
 }
 
-class _SendButtonState extends State<_SendButton> {
+class _SendButtonState extends State<_SendButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isSending = false;
+
   void _hasErrorsChanged() {
     setState(() {
       // Update disabled/non-disabled state
@@ -1258,6 +1265,39 @@ class _SendButtonState extends State<_SendButton> {
   @override
   void initState() {
     super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    // Slide up animation - starts from bottom and moves up
+    _slideAnimation = Tween<double>(
+      begin: 0.0,
+      end: -50.0, // Move up by 50 pixels
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Scale animation - slightly grows then shrinks
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+    ));
+
+    // Fade animation - fades out as it moves up
+    _fadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+    ));
+
     final controller = widget.controller;
     if (controller is StreamComposeBoxController) {
       controller.topic.hasValidationErrors.addListener(_hasErrorsChanged);
@@ -1285,6 +1325,7 @@ class _SendButtonState extends State<_SendButton> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     final controller = widget.controller;
     if (controller is StreamComposeBoxController) {
       controller.topic.hasValidationErrors.removeListener(_hasErrorsChanged);
@@ -1323,15 +1364,47 @@ class _SendButtonState extends State<_SendButton> {
       return;
     }
 
+    if (_isSending) return; // Prevent double sends
+
+    setState(() {
+      _isSending = true;
+    });
+
+    // Add haptic feedback immediately
+    HapticFeedback.mediumImpact();
+
     final store = PerAccountStoreWidget.of(context);
     final content = controller.content.textNormalized;
 
-    controller.content.clear();
+    // Start hero animation immediately
+    _animationController.forward();
+
+    // Clear content after starting animation
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        controller.content.clear();
+      }
+    });
 
     try {
       await store.sendMessage(destination: widget.getDestination(), content: content);
+
+      // Success haptic feedback
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        // Reset after a brief delay to show completion
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (mounted) {
+          _animationController.reset();
+        }
+      }
     } on ApiRequestException catch (e) {
       if (!mounted) return;
+
+      // Reset animation on error and restore content
+      _animationController.reset();
+      controller.content.value = TextEditingValue(text: content);
+
       final zulipLocalizations = ZulipLocalizations.of(context);
       final message = switch (e) {
         ZulipApiException() => zulipLocalizations.errorServerMessage(e.message),
@@ -1341,29 +1414,89 @@ class _SendButtonState extends State<_SendButton> {
         title: zulipLocalizations.errorMessageNotSent,
         message: message);
       return;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final zulipLocalizations = ZulipLocalizations.of(context);
 
-    final iconColor = _hasValidationErrors
-      ? designVariables.icon.withFadedAlpha(0.5)
-      : designVariables.icon;
+    final isEnabled = !_hasValidationErrors && !_isSending;
 
     return SizedBox(
       width: _composeButtonSize,
-      child: IconButton(
-        tooltip: zulipLocalizations.composeBoxSendTooltip,
-        icon: Icon(ZulipIcons.send,
-          // We set [Icon.color] instead of [IconButton.color] because the
-          // latter implicitly uses colors derived from it to override the
-          // ambient [ButtonStyle.overlayColor], where we set the color for
-          // the highlight state to match the Figma design.
-          color: iconColor),
-        onPressed: _send));
+      height: _composeButtonSize,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _slideAnimation.value),
+            child: Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Opacity(
+                opacity: _fadeAnimation.value,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: isEnabled
+                        ? LinearGradient(
+                            colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: isEnabled ? null : designVariables.icon.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                    boxShadow: isEnabled && !_isSending
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: isEnabled ? _send : null,
+                      child: Center(
+                        child: _isSending
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    isEnabled ? Colors.white : designVariables.icon,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                ZulipIcons.send,
+                                color: isEnabled ? Colors.white : designVariables.icon,
+                                size: 20,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -1413,17 +1546,28 @@ class _ComposeBoxContainer extends StatelessWidget {
       (null,         null) => throw UnimplementedError(), // not allowed, see dartdoc
     };
 
-    // TODO(design): Maybe put a max width on the compose box, like we do on
-    //   the message list itself; if so, remember to update ComposeBox's dartdoc.
-    return Container(width: double.infinity,
+    // Modern WhatsApp-style compose box design
+    return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: designVariables.borderBar)),
-        boxShadow: ComposeBoxTheme.of(context).boxShadow,
+        color: designVariables.composeBoxBg,
+        border: Border(top: BorderSide(
+          color: designVariables.borderBar.withValues(alpha: 0.1),
+          width: 0.5,
+        )),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Material(
-        color: designVariables.composeBoxBg,
+        color: Colors.transparent,
         child: Column(
-          children: children)));
+          children: children)),
+    );
   }
 }
 

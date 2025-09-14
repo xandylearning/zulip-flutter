@@ -67,6 +67,27 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get chooseAccountButtonAddAnAccount => '新しいアカウントを追加';
 
   @override
+  String get callsPageTitle => 'Calls';
+
+  @override
+  String get chatsPageTitle => 'Chats';
+
+  @override
+  String get callLogTabTitle => 'Call log';
+
+  @override
+  String get contactsTabTitle => 'Contacts';
+
+  @override
+  String get callLogEmptyPlaceholder => 'No recent calls';
+
+  @override
+  String get contactsEmptyPlaceholder => 'No contacts found';
+
+  @override
+  String get chatsEmptyPlaceholder => 'No conversations yet. Start a new chat!';
+
+  @override
   String get profileButtonSendDirectMessage => 'ダイレクトメッセージを送信';
 
   @override

@@ -316,6 +316,9 @@ class _MessageListPageState extends State<MessageListPage> implements MessageLis
       initAnchor = AnchorCode.newest;
     } else if (widget.initAnchorMessageId != null) {
       initAnchor = NumericAnchor(widget.initAnchorMessageId!);
+    } else if (narrow is DmNarrow) {
+      // For DM views, always start from oldest (top) to show chronological order
+      initAnchor = AnchorCode.oldest;
     } else {
       final globalSettings = GlobalStoreWidget.settingsOf(context);
       final useFirstUnread = globalSettings.shouldVisitFirstUnread(narrow: narrow);
@@ -419,7 +422,10 @@ abstract class _MessageListAppBar {
       case MentionsNarrow():
       case StarredMessagesNarrow():
       case KeywordSearchNarrow():
+        break;
       case DmNarrow():
+        // Call buttons are now handled in _ModernDmAppBarTitle widget
+        // No additional actions needed here
         break;
       case ChannelNarrow(:final streamId):
         actions.add(_TopicListButton(streamId: streamId));
@@ -629,9 +635,19 @@ class MessageListAppBarTitle extends StatelessWidget {
         final store = PerAccountStoreWidget.of(context);
         if (otherRecipientIds.isEmpty) {
           return Text(zulipLocalizations.dmsWithYourselfPageTitle);
+        } else if (otherRecipientIds.length == 1) {
+          // Single DM - show modern interface with user info and call buttons
+          final otherUserId = otherRecipientIds.first;
+          final otherUser = store.getUser(otherUserId);
+          if (otherUser != null) {
+            return _ModernDmAppBarTitle(user: otherUser);
+          } else {
+            // Fallback if user not found
+            return Text('DM with User #$otherUserId');
+          }
         } else {
+          // Group DM - show names
           final names = otherRecipientIds.map(store.userDisplayName);
-          // TODO show avatars
           return Text(
             zulipLocalizations.dmsWithOthersPageTitle(names.join(', ')));
         }
@@ -642,6 +658,115 @@ class MessageListAppBarTitle extends StatelessWidget {
           MessageListPage.ancestorOf(context).model!.renarrowAndFetch(narrow);
         });
     }
+  }
+}
+
+/// Modern DM app bar title with user info, status and call buttons
+class _ModernDmAppBarTitle extends StatelessWidget {
+  const _ModernDmAppBarTitle({required this.user});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    // Determine user status - simplified for now
+    final isOnline = false; // TODO: Implement proper presence checking
+    final statusText = isOnline ? 'Online' : 'Last seen recently';
+    final statusColor = isOnline
+        ? const Color(0xFF4CAF50) // Green for online
+        : designVariables.textMessageMuted;
+
+    return Row(
+      children: [
+        // User avatar
+        Hero(
+          tag: 'dm_appbar_avatar_${user.userId}',
+          child: Avatar(
+            size: 40,
+            borderRadius: 20,
+            userId: user.userId,
+            showPresence: true,
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // User info
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                user.fullName,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: designVariables.title,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                statusText,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: statusColor,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Call buttons
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Video call button
+            IconButton(
+              onPressed: () {
+                // TODO: Implement video call functionality
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Video call feature coming soon!')),
+                );
+              },
+              icon: Icon(
+                Icons.videocam_outlined,
+                color: designVariables.icon,
+                size: 24,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Voice call button
+            IconButton(
+              onPressed: () {
+                // TODO: Implement voice call functionality
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Voice call feature coming soon!')),
+                );
+              },
+              icon: Icon(
+                Icons.phone_outlined,
+                color: designVariables.icon,
+                size: 24,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
@@ -1059,6 +1184,14 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
   Widget _buildListView(BuildContext context) {
     const centerSliverKey = ValueKey('center sliver');
+    final isDmNarrow = widget.narrow is DmNarrow;
+    final designVariables = DesignVariables.of(context);
+
+    // Set background with solid colors for DM, theme background for others
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDmNarrow
+        ? (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F9FB))
+        : designVariables.bgMessageRegular;
 
     // The list has two slivers: a top sliver growing upward,
     // and a bottom sliver growing downward.
@@ -1067,9 +1200,12 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
     final topItems = model.middleItem;
     final bottomItems = totalItems - topItems;
 
+    // Always start from top for consistent WhatsApp-like experience
+    final bool shouldStartFromTop = true;
+
     // The top sliver has its child 0 as the item just before the
     // sliver boundary, child 1 as the item before that, and so on.
-    final topSliver = SliverStickyHeaderList(
+    Widget topSliver = SliverStickyHeaderList(
       headerPlacement: HeaderPlacement.scrollingStart,
       delegate: SliverChildBuilderDelegate(
         // To preserve state across rebuilds for individual [MessageItem]
@@ -1095,7 +1231,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
           if (childIndex < 0) return null;
           return childIndex;
         },
-        childCount: topItems + 1,
+        childCount: shouldStartFromTop ? 0 : topItems + 1,
         (context, childIndex) {
           if (childIndex == topItems) return _buildStartCap();
 
@@ -1135,13 +1271,24 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
           if (childIndex < 0) return null;
           return childIndex;
         },
-        childCount: bottomItems + 1,
+        childCount: shouldStartFromTop ? totalItems + 1 : bottomItems + 1,
         (context, childIndex) {
-          if (childIndex == bottomItems) return _buildEndCap();
+          if (shouldStartFromTop) {
+            // For DM view starting from top, show all items in bottom sliver in chronological order
+            if (childIndex == totalItems) return _buildEndCap();
 
-          final itemIndex = topItems + childIndex;
-          final data = model.items[itemIndex];
-          return _buildItem(data, isLastInFeed: itemIndex == totalItems - 1);
+            // Show messages in chronological order (index 0 = oldest message)
+            final itemIndex = childIndex;
+            final data = model.items[itemIndex];
+            return _buildItem(data, isLastInFeed: itemIndex == totalItems - 1);
+          } else {
+            // Original behavior for other views
+            if (childIndex == bottomItems) return _buildEndCap();
+
+            final itemIndex = topItems + childIndex;
+            final data = model.items[itemIndex];
+            return _buildItem(data, isLastInFeed: itemIndex == totalItems - 1);
+          }
         }));
 
     if (!ComposeBox.hasComposeBox(widget.narrow)) {
@@ -1150,7 +1297,8 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
       bottomSliver = SliverSafeArea(key: bottomSliver.key, sliver: bottomSliver);
     }
 
-    return MessageListScrollView(
+    // Add a colored background container for the entire list
+    Widget scrollView = MessageListScrollView(
       key: _scrollViewKey,
 
       // TODO: Offer `ScrollViewKeyboardDismissBehavior.interactive` (or
@@ -1166,73 +1314,184 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
       controller: scrollController,
       semanticChildCount: totalItems, // TODO(#537): what's the right value for this?
-      center: centerSliverKey,
+      center: shouldStartFromTop ? null : centerSliverKey,
       paintOrder: SliverPaintOrder.firstIsTop,
 
-      slivers: [
-        topSliver,
-        bottomSliver,
-      ]);
+      slivers: shouldStartFromTop
+          ? [bottomSliver] // Start from top when no messages
+          : [
+              topSliver,
+              bottomSliver,
+            ]);
+
+    // Wrap the scroll view with solid background for DM
+    Widget result = Container(
+      color: backgroundColor,
+      child: scrollView,
+    );
+
+    // Add padding to ensure messages start properly
+    result = Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: result,
+    );
+
+    return result;
   }
 
   Widget _buildStartCap() {
-    // If we're done fetching older messages, show that.
-    // Else if we're busy with fetching, then show a loading indicator.
-    //
-    // This applies even if the fetch is over, but failed, and we're still
-    // in backoff from it; and even if the fetch is/was for the other direction.
-    // The loading indicator really means "busy, working on it"; and that's the
-    // right summary even if the fetch is internally queued behind other work.
-    return model.haveOldest ? const _MessageListHistoryStart()
-      : model.busyFetchingMore ? const _MessageListLoadingMore()
-      : const SizedBox.shrink();
+    // Keep all views clean without loading indicators or "No earlier messages" text
+    return const SizedBox.shrink();
   }
 
   Widget _buildEndCap() {
     if (model.haveNewest) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TypingStatusWidget(narrow: widget.narrow),
-        // TODO perhaps offer mark-as-read even when not done fetching?
         MarkAsReadWidget(narrow: widget.narrow),
         // To reinforce that the end of the feed has been reached:
         //   https://chat.zulip.org/#narrow/channel/48-mobile/topic/space.20at.20end.20of.20thread/near/2203391
         const SizedBox(height: 12),
       ]);
-    } else if (model.busyFetchingMore) {
-      // See [_buildStartCap] for why this condition shows a loading indicator.
-      return const _MessageListLoadingMore();
     } else {
       return SizedBox.shrink();
     }
   }
 
   Widget _buildItem(MessageListItem data, {required bool isLastInFeed}) {
+    final isDmNarrow = widget.narrow is DmNarrow;
+
     switch (data) {
       case MessageListRecipientHeaderItem():
+        if (isDmNarrow) {
+          // Hide recipient headers in DM view for clean look
+          return const SizedBox.shrink();
+        }
         final header = RecipientHeader(message: data.message, narrow: widget.narrow);
         return StickyHeaderItem(allowOverflow: true,
           header: header, child: header);
+
       case MessageListDateSeparatorItem():
-        final header = RecipientHeader(message: data.message, narrow: widget.narrow);
-        return StickyHeaderItem(allowOverflow: true,
-          header: header,
-          child: DateSeparator(message: data.message));
+        if (isDmNarrow) {
+          // Show modern WhatsApp-style date separators in DM view
+          return _buildStickyDateHeader(data.message);
+        }
+        // For channels/topics, show date separator with recipient header
+        return _buildChannelDateSeparator(data.message);
+
       case MessageListMessageItem():
-        final header = RecipientHeader(message: data.message, narrow: widget.narrow);
+        final header = isDmNarrow
+            ? const SizedBox.shrink() // No header for clean DM look
+            : RecipientHeader(message: data.message, narrow: widget.narrow);
         return MessageItem(
           key: ValueKey(data.message.id),
           narrow: widget.narrow,
           header: header,
           isLastInFeed: isLastInFeed,
           item: data);
+
       case MessageListOutboxMessageItem():
-        final header = RecipientHeader(message: data.message, narrow: widget.narrow);
+        final header = isDmNarrow
+            ? const SizedBox.shrink() // No header for clean DM look
+            : RecipientHeader(message: data.message, narrow: widget.narrow);
         return MessageItem(
           narrow: widget.narrow,
           header: header,
           isLastInFeed: isLastInFeed,
           item: data);
     }
+  }
+
+  /// Build a sticky date header for DM messages with simple design
+  Widget _buildStickyDateHeader(MessageBase message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFF8F9FB);
+
+    // Create the simple date pill widget
+    final datePill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFE3E3E3),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        DateFormat.MMMd().format(DateTime.fromMillisecondsSinceEpoch(message.timestamp * 1000)),
+        style: TextStyle(
+          fontSize: 13,
+          height: (16 / 13),
+          fontWeight: FontWeight.w500,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.8)
+              : Colors.black.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+
+    return StickyHeaderItem(
+      allowOverflow: true,
+      header: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: backgroundColor,
+        child: Center(child: datePill),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: backgroundColor,
+        child: Center(child: datePill),
+      ),
+    );
+  }
+
+  /// Build date separator for channel/topic views with modern styling
+  Widget _buildChannelDateSeparator(MessageBase message) {
+    final designVariables = DesignVariables.of(context);
+
+    // Create a simple modern date separator
+    final dateWidget = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: designVariables.background.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: designVariables.borderBar.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: DateText(
+        fontSize: 12,
+        height: (15 / 12),
+        timestamp: message.timestamp,
+      ),
+    );
+
+    return StickyHeaderItem(
+      allowOverflow: true,
+      header: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        color: designVariables.background,
+        child: Center(child: dateWidget),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        color: designVariables.background,
+        child: Center(child: dateWidget),
+      ),
+    );
   }
 }
 
@@ -1568,10 +1827,17 @@ class MessageItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final designVariables = DesignVariables.of(context);
+    final isDmNarrow = narrow is DmNarrow;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Set background with solid colors for DM, theme background for others
+    final backgroundColor = isDmNarrow
+        ? (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F9FB))
+        : designVariables.bgMessageRegular;
 
     final item = this.item;
     Widget child = ColoredBox(
-      color: designVariables.bgMessageRegular,
+      color: backgroundColor,
       child: Column(children: [
         switch (item) {
           MessageListMessageItem() => MessageWithPossibleSender(
@@ -2088,11 +2354,13 @@ enum MessageTimestampStyle {
   }
 }
 
-/// A Zulip message, showing the sender's name and avatar if specified.
-// Design referenced from:
-//   - https://github.com/zulip/zulip-mobile/issues/5511
-//   - https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=538%3A20849&mode=dev
-class MessageWithPossibleSender extends StatelessWidget {
+/// A WhatsApp-style message bubble showing sender's avatar and content.
+// Design inspired by WhatsApp's message bubble layout with:
+//   - Rounded message bubbles with different colors for sent/received
+//   - Proper sender/receiver alignment (left/right)
+//   - Avatar positioning and sender info display
+//   - Smooth animations and micro-interactions
+class MessageWithPossibleSender extends StatefulWidget {
   const MessageWithPossibleSender({
     super.key,
     required this.narrow,
@@ -2103,10 +2371,57 @@ class MessageWithPossibleSender extends StatelessWidget {
   final MessageListMessageItem item;
 
   @override
+  State<MessageWithPossibleSender> createState() => _MessageWithPossibleSenderState();
+}
+
+class _MessageWithPossibleSenderState extends State<MessageWithPossibleSender>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Start animation when message appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animationController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
-    final message = item.message;
+    final message = widget.item.message;
+    final isFromSelf = message.senderId == store.selfUserId;
 
     final zulipLocalizations = ZulipLocalizations.of(context);
     String? editStateText;
@@ -2120,27 +2435,15 @@ class MessageWithPossibleSender extends StatelessWidget {
 
     Widget? star;
     if (message.flags.contains(MessageFlag.starred)) {
-      final starOffset = switch (Directionality.of(context)) {
-        TextDirection.ltr => -2.0,
-        TextDirection.rtl => 2.0,
-      };
-      star = Transform.translate(
-        offset: Offset(starOffset, 0),
-        child: Icon(ZulipIcons.star_filled, size: 16, color: designVariables.star));
+      star = Icon(ZulipIcons.star_filled, size: 14, color: designVariables.star);
     }
 
-    Widget content = MessageContent(message: message, content: item.content);
+    Widget content = MessageContent(message: message, content: widget.item.content);
 
     final editMessageErrorStatus = store.getEditMessageErrorStatus(message.id);
     if (editMessageErrorStatus != null) {
-      // The Figma also fades the sender row:
-      //   https://github.com/zulip/zulip-flutter/pull/1498#discussion_r2076574000
-      // We've decided to just fade the message content because that's the only
-      // thing that's changing.
       content = Opacity(opacity: 0.6, child: content);
       if (!editMessageErrorStatus) {
-        // IgnorePointer neutralizes interactable message content like links;
-        // this seemed appropriate along with the faded appearance.
         content = IgnorePointer(child: content);
       } else {
         content = _RestoreEditMessageGestureDetector(messageId: message.id,
@@ -2148,7 +2451,7 @@ class MessageWithPossibleSender extends StatelessWidget {
       }
     }
 
-    final tapOpensConversation = switch (narrow) {
+    final tapOpensConversation = switch (widget.narrow) {
       CombinedFeedNarrow()
         || ChannelNarrow()
         || TopicNarrow()
@@ -2159,70 +2462,266 @@ class MessageWithPossibleSender extends StatelessWidget {
     };
 
     final showAsMuted = store.isUserMuted(message.senderId)
-      && !MessageListPage.maybeRevealedMutedMessagesOf(context)!
-                         .isMutedMessageRevealed(message.id);
+      && !(MessageListPage.maybeRevealedMutedMessagesOf(context)
+                         ?.isMutedMessageRevealed(message.id) ?? false);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: tapOpensConversation
-        ? () => unawaited(Navigator.push(context,
-            MessageListPage.buildRoute(context: context,
-              narrow: SendableNarrow.ofMessage(message, selfUserId: store.selfUserId),
-              // TODO(#1655) "this view does not mark messages as read on scroll"
-              initAnchorMessageId: message.id)))
-        : null,
-      onLongPress: showAsMuted
-        ? null // TODO write a test for this
-        : () => showMessageActionSheet(context: context, message: message),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Column(children: [
-          if (item.showSender)
-            SenderRow(message: message,
-              timestampStyle: MessageTimestampStyle.timeOnly),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: localizedTextBaseline(context),
-            children: [
-              const SizedBox(width: 16),
-              Expanded(child: showAsMuted
-                ? Align(
-                    alignment: AlignmentDirectional.topStart,
-                    child: ZulipWebUiKitButton(
-                      label: zulipLocalizations.revealButtonLabel,
-                      icon: ZulipIcons.eye,
-                      size: ZulipWebUiKitButtonSize.small,
-                      intent: ZulipWebUiKitButtonIntent.neutral,
-                      attention: ZulipWebUiKitButtonAttention.minimal,
-                      onPressed: () {
-                        MessageListPage.ancestorOf(context).revealMutedMessage(message.id);
-                      }))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      content,
-                      if ((message.reactions?.total ?? 0) > 0)
-                        ReactionChipsList(messageId: message.id, reactions: message.reactions!),
-                      if (editMessageErrorStatus != null)
-                        _EditMessageStatusRow(messageId: message.id, status: editMessageErrorStatus)
-                      else if (editStateText != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(editStateText,
-                            textAlign: TextAlign.end,
-                            style: TextStyle(
-                              color: designVariables.labelEdited,
-                              fontSize: 12,
-                              height: (12 / 12),
-                              letterSpacing: proportionalLetterSpacing(context,
-                                0.05, baseFontSize: 12))))
-                      else
-                        Padding(padding: const EdgeInsets.only(bottom: 4))
-                    ])),
-              SizedBox(width: 16,
-                child: star),
-            ]),
-        ])));
+    // Simple bubble colors - blue for sent, white/gray for received
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final sentBubbleColor = isDark
+        ? const Color(0xFF007AFF)  // iOS blue for dark mode
+        : const Color(0xFF007AFF); // iOS blue for light mode
+
+    final receivedBubbleColor = isDark
+        ? const Color(0xFF2A2A2A)  // Dark gray for dark mode
+        : Colors.white;            // White for light mode
+
+    final textColor = isFromSelf
+        ? Colors.white
+        : (isDark ? Colors.white : Colors.black87);
+
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: tapOpensConversation
+                ? () => unawaited(Navigator.push(context,
+                    MessageListPage.buildRoute(context: context,
+                      narrow: SendableNarrow.ofMessage(message, selfUserId: store.selfUserId),
+                      initAnchorMessageId: message.id)))
+                : null,
+              onLongPress: showAsMuted
+                ? null
+                : () => showMessageActionSheet(context: context, message: message),
+              child: Container(
+                margin: EdgeInsets.only(
+                  top: widget.item.showSender ? 12 : 2,
+                  bottom: 2,
+                  left: isFromSelf ? 48 : 12,
+                  right: isFromSelf ? 12 : 48,
+                ),
+                child: Row(
+                  mainAxisAlignment: isFromSelf ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Avatar for received messages (left side)
+                    if (!isFromSelf && widget.item.showSender) ...[
+                      GestureDetector(
+                        onTap: () => Navigator.push(context,
+                          ProfilePage.buildRoute(context: context,
+                            userId: message.senderId)),
+                        child: Hero(
+                          tag: 'message_avatar_${message.senderId}_${message.id}',
+                          child: Avatar(
+                            size: 32,
+                            borderRadius: 16,
+                            showPresence: false,
+                            replaceIfMuted: showAsMuted,
+                            userId: message.senderId,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+
+                    // Message bubble with content-fit sizing
+                    Align(
+                      alignment: isFromSelf ? Alignment.centerRight : Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.7,
+                        ),
+                        child: Container(
+                        decoration: BoxDecoration(
+                          color: isFromSelf ? sentBubbleColor : receivedBubbleColor,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isFromSelf ? 16 : 4),
+                            bottomRight: Radius.circular(isFromSelf ? 4 : 16),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isFromSelf
+                                  ? sentBubbleColor.withValues(alpha: isDark ? 0.3 : 0.2)
+                                  : Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+                              blurRadius: isDark ? 6 : 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Sender name for received messages (inside bubble)
+                            if (!isFromSelf && widget.item.showSender)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                                child: Text(
+                                  store.senderDisplayName(message),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: designVariables.link,
+                                  ),
+                                ),
+                              ),
+
+                            // Message content
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                12,
+                                (!isFromSelf && widget.item.showSender) ? 0 : 8,
+                                12,
+                                8
+                              ),
+                              child: showAsMuted
+                                ? ZulipWebUiKitButton(
+                                    label: zulipLocalizations.revealButtonLabel,
+                                    icon: ZulipIcons.eye,
+                                    size: ZulipWebUiKitButtonSize.small,
+                                    intent: ZulipWebUiKitButtonIntent.neutral,
+                                    attention: ZulipWebUiKitButtonAttention.minimal,
+                                    onPressed: () {
+                                      MessageListPage.ancestorOf(context).revealMutedMessage(message.id);
+                                    })
+                                : DefaultTextStyle(
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 16,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Theme(
+                                          data: Theme.of(context).copyWith(
+                                            textTheme: Theme.of(context).textTheme.copyWith(
+                                              bodyMedium: TextStyle(color: textColor),
+                                              bodyLarge: TextStyle(color: textColor),
+                                              bodySmall: TextStyle(color: textColor),
+                                            ),
+                                            extensions: [
+                                              // Override ContentTheme for sent messages to use white text
+                                              if (isFromSelf)
+                                                ContentTheme.of(context).copyWith(
+                                                  textStylePlainParagraph: ContentTheme.of(context).textStylePlainParagraph.copyWith(
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              else
+                                                ContentTheme.of(context),
+                                            ],
+                                          ),
+                                          child: DefaultTextStyle(
+                                            style: TextStyle(color: textColor, fontSize: 16),
+                                            child: content,
+                                          ),
+                                        ),
+
+                                        // Reactions below content in WhatsApp style
+                                        if ((message.reactions?.total ?? 0) > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8),
+                                            child: ReactionChipsList(
+                                              messageId: message.id,
+                                              reactions: message.reactions!
+                                            ),
+                                          ),
+
+                                        // Edit message error status
+                                        if (editMessageErrorStatus != null)
+                                          _EditMessageStatusRow(
+                                            messageId: message.id,
+                                            status: editMessageErrorStatus
+                                          ),
+
+                                        // Timestamp and status row
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            const SizedBox(width: 8),
+                                            if (editStateText != null)
+                                              Text(
+                                                editStateText,
+                                                style: TextStyle(
+                                                  color: textColor.withValues(alpha: 0.6),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                            const Spacer(),
+                                            Text(
+                                              MessageTimestampStyle.timeOnly.format(
+                                                message.timestamp,
+                                                now: DateTime.now(),
+                                                twentyFourHourTimeMode: store.userSettings.twentyFourHourTime,
+                                                zulipLocalizations: zulipLocalizations,
+                                              ) ?? '',
+                                              style: TextStyle(
+                                                color: textColor.withValues(alpha: 0.6),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                            if (star != null) ...[
+                                              const SizedBox(width: 4),
+                                              star,
+                                            ],
+                                            // Message status icons for sent messages
+                                            if (isFromSelf) ...[
+                                              const SizedBox(width: 4),
+                                              Icon(
+                                                message.flags.contains(MessageFlag.read)
+                                                  ? Icons.done_all
+                                                  : Icons.done,
+                                                size: 14,
+                                                color: message.flags.contains(MessageFlag.read)
+                                                  ? designVariables.link
+                                                  : textColor.withValues(alpha: 0.6),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                            ),
+                          ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Avatar for sent messages (right side, smaller)
+                    if (isFromSelf && widget.item.showSender) ...[
+                      const SizedBox(width: 8),
+                      Hero(
+                        tag: 'message_avatar_sent_${message.senderId}_${message.id}',
+                        child: Avatar(
+                          size: 24,
+                          borderRadius: 12,
+                          showPresence: false,
+                          replaceIfMuted: false,
+                          userId: message.senderId,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -2303,25 +2802,78 @@ class _RestoreEditMessageGestureDetector extends StatelessWidget {
   }
 }
 
-/// A "local echo" placeholder for a Zulip message to be sent by the self-user.
+/// A WhatsApp-style "local echo" placeholder for outbox messages.
 ///
 /// See also [OutboxMessage].
-class OutboxMessageWithPossibleSender extends StatelessWidget {
+class OutboxMessageWithPossibleSender extends StatefulWidget {
   const OutboxMessageWithPossibleSender({super.key, required this.item});
 
   final MessageListOutboxMessageItem item;
 
   @override
+  State<OutboxMessageWithPossibleSender> createState() => _OutboxMessageWithPossibleSenderState();
+}
+
+class _OutboxMessageWithPossibleSenderState extends State<OutboxMessageWithPossibleSender>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.3, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Start animation when message appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animationController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final message = item.message;
+    final message = widget.item.message;
     final localMessageId = message.localMessageId;
 
+    // Simple bubble colors for outbox (sent messages)
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final sentBubbleColor = isDark
+        ? const Color(0xFF007AFF)  // iOS blue for dark mode
+        : const Color(0xFF007AFF); // iOS blue for light mode
+
+    final textColor = Colors.white;
+
     // This is adapted from [MessageContent].
-    // TODO(#576): Offer InheritedMessage ancestor once we are ready
-    //   to support local echoing images and lightbox.
     Widget content = DefaultTextStyle(
-      style: ContentTheme.of(context).textStylePlainParagraph,
-      child: BlockContentList(nodes: item.content.nodes));
+      style: ContentTheme.of(context).textStylePlainParagraph.copyWith(color: textColor),
+      child: BlockContentList(nodes: widget.item.content.nodes));
 
     switch (message.state) {
       case OutboxMessageState.hidden:
@@ -2330,77 +2882,131 @@ class OutboxMessageWithPossibleSender extends StatelessWidget {
         break;
       case OutboxMessageState.failed:
       case OutboxMessageState.waitPeriodExpired:
-        // TODO(#576): When we support rendered-content local echo,
-        //   use IgnorePointer along with this faded appearance,
-        //   like we do for the failed-message-edit state
         content = _RestoreOutboxMessageGestureDetector(
           localMessageId: localMessageId,
           child: Opacity(opacity: 0.6, child: content));
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(children: [
-        if (item.showSender)
-          SenderRow(message: message, timestampStyle: MessageTimestampStyle.none),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              content,
-              _OutboxMessageStatusRow(
-                localMessageId: localMessageId, outboxMessageState: message.state),
-            ])),
-      ]));
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              margin: EdgeInsets.only(
+                top: widget.item.showSender ? 12 : 2,
+                bottom: 2,
+                left: 48,
+                right: 12,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Message bubble with content-fit sizing (always on right for outbox)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.7,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: sentBubbleColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(4),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: sentBubbleColor.withValues(alpha: isDark ? 0.3 : 0.2),
+                            blurRadius: isDark ? 6 : 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: DefaultTextStyle(
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Theme(
+                                data: Theme.of(context).copyWith(
+                                  textTheme: Theme.of(context).textTheme.copyWith(
+                                    bodyMedium: TextStyle(color: textColor),
+                                    bodyLarge: TextStyle(color: textColor),
+                                    bodySmall: TextStyle(color: textColor),
+                                  ),
+                                  extensions: [
+                                    // Override ContentTheme for outbox messages to use white text
+                                    ContentTheme.of(context).copyWith(
+                                      textStylePlainParagraph: ContentTheme.of(context).textStylePlainParagraph.copyWith(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                child: DefaultTextStyle(
+                                  style: TextStyle(color: textColor, fontSize: 16),
+                                  child: content,
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const Spacer(),
+                                  // Sending status indicator
+                                  Icon(
+                                    switch (message.state) {
+                                      OutboxMessageState.waiting => Icons.access_time,
+                                      OutboxMessageState.failed || OutboxMessageState.waitPeriodExpired => Icons.error_outline,
+                                      OutboxMessageState.hidden => Icons.access_time,
+                                    },
+                                    size: 14,
+                                    color: textColor.withValues(alpha: 0.6),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Avatar for sent messages (right side, smaller)
+                  if (widget.item.showSender) ...[
+                    const SizedBox(width: 8),
+                    Hero(
+                      tag: 'outbox_avatar_${message.senderId}_${message.localMessageId}',
+                      child: Avatar(
+                        size: 24,
+                        borderRadius: 12,
+                        showPresence: false,
+                        replaceIfMuted: false,
+                        userId: message.senderId,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
-class _OutboxMessageStatusRow extends StatelessWidget {
-  const _OutboxMessageStatusRow({
-    required this.localMessageId,
-    required this.outboxMessageState,
-  });
-
-  final int localMessageId;
-  final OutboxMessageState outboxMessageState;
-
-  @override
-  Widget build(BuildContext context) {
-    switch (outboxMessageState) {
-      case OutboxMessageState.hidden:
-        assert(false,
-          'Hidden OutboxMessage messages should not appear in message lists');
-        return SizedBox.shrink();
-
-      case OutboxMessageState.waiting:
-        final designVariables = DesignVariables.of(context);
-        return Padding(
-          padding: const EdgeInsetsGeometry.only(bottom: 2),
-          child: LinearProgressIndicator(
-            minHeight: 2,
-            color: designVariables.foreground.withFadedAlpha(0.5),
-            backgroundColor: designVariables.foreground.withFadedAlpha(0.2)));
-
-      case OutboxMessageState.failed:
-      case OutboxMessageState.waitPeriodExpired:
-        final designVariables = DesignVariables.of(context);
-        final zulipLocalizations = ZulipLocalizations.of(context);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: _RestoreOutboxMessageGestureDetector(
-            localMessageId: localMessageId,
-            child: Text(
-              zulipLocalizations.messageNotSentLabel,
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                color: designVariables.btnLabelAttLowIntDanger,
-                fontSize: 12,
-                height: 12 / 12,
-                letterSpacing: proportionalLetterSpacing(
-                  context, 0.05, baseFontSize: 12)))));
-    }
-  }
-}
 
 class _RestoreOutboxMessageGestureDetector extends StatelessWidget {
   const _RestoreOutboxMessageGestureDetector({

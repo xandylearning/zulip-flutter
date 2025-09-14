@@ -448,6 +448,10 @@ mixin _MessageSequence {
       || !haveSameRecipient(prevMessage, message)
     ) {
       items.add(MessageListRecipientHeaderItem(message));
+      // Always add a date separator for the first message or when recipients differ
+      if (prevMessage == null || !haveSameRecipient(prevMessage, message)) {
+        items.add(MessageListDateSeparatorItem(message));
+      }
       canShareSender = false;
     } else {
       assert(items.last is MessageListMessageBaseItem);

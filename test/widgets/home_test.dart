@@ -114,21 +114,24 @@ void main () {
     testWidgets('update app bar title when switching between views', (tester) async {
       await prepare(tester);
 
+      // Start on chats tab by default
       check(find.descendant(
         of: find.byType(ZulipAppBar),
-        matching: find.text('Inbox'))).findsOne();
+        matching: find.text('Chats'))).findsOne();
 
-      await tester.tap(find.byIcon(ZulipIcons.hash_italic));
+      // Switch to calls tab
+      await tester.tap(find.byIcon(Icons.phone_outlined));
       await tester.pump();
       check(find.descendant(
         of: find.byType(ZulipAppBar),
-        matching: find.text('Channels'))).findsOne();
+        matching: find.text('Calls'))).findsOne();
 
-      await tester.tap(find.byIcon(ZulipIcons.two_person));
+      // Switch to settings tab
+      await tester.tap(find.byIcon(Icons.settings_outlined));
       await tester.pump();
       check(find.descendant(
         of: find.byType(ZulipAppBar),
-        matching: find.text('Direct messages'))).findsOne();
+        matching: find.text('Settings'))).findsOne();
     });
 
     testWidgets('combined feed', (tester) async {

@@ -68,6 +68,27 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get chooseAccountButtonAddAnAccount => 'Додати обліковий запис';
 
   @override
+  String get callsPageTitle => 'Calls';
+
+  @override
+  String get chatsPageTitle => 'Chats';
+
+  @override
+  String get callLogTabTitle => 'Call log';
+
+  @override
+  String get contactsTabTitle => 'Contacts';
+
+  @override
+  String get callLogEmptyPlaceholder => 'No recent calls';
+
+  @override
+  String get contactsEmptyPlaceholder => 'No contacts found';
+
+  @override
+  String get chatsEmptyPlaceholder => 'No conversations yet. Start a new chat!';
+
+  @override
   String get profileButtonSendDirectMessage =>
       'Надіслати особисте повідомлення';
 

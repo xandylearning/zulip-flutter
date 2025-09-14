@@ -2,10 +2,14 @@
      open the android/ subtree as its own project
      and follow these instructions:
        https://developer.android.com/build/manage-manifests#inspect_the_merged_manifest_and_find_conflicts -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
    <uses-permission android:name="android.permission.INTERNET"/>
    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
    <uses-permission android:name="android.permission.VIBRATE"/>
+
+   <!-- Remove READ_PHONE_STATE permission added by firebase_messaging to avoid privacy policy requirement -->
+   <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove" />
    <application
         android:label="xandy"
         android:name="${applicationName}"

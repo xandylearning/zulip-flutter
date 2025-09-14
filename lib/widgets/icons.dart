@@ -192,6 +192,31 @@ abstract final class ZulipIcons {
   /// The Zulip custom icon "unmute".
   static const IconData unmute = IconData(0xf138, fontFamily: "Zulip Icons");
 
+  /// Phone icon (fallback to Material icon)
+  static const IconData phone = IconData(0xe0cd, fontFamily: "MaterialIcons");
+
+  // Additional icons for WhatsApp-like features (using existing icons as placeholders)
+  /// Call icon (using phone equivalent)
+  static const IconData call = phone;
+
+  /// Video call icon
+  static const IconData video_call = IconData(0xf139, fontFamily: "Zulip Icons");
+
+  /// Call incoming icon
+  static const IconData call_incoming = IconData(0xf13a, fontFamily: "Zulip Icons");
+
+  /// Call outgoing icon
+  static const IconData call_outgoing = IconData(0xf13b, fontFamily: "Zulip Icons");
+
+  /// Call missed icon
+  static const IconData call_missed = IconData(0xf13c, fontFamily: "Zulip Icons");
+
+  /// Group icon
+  static const IconData group = three_person;
+
+  /// Pencil/edit icon
+  static const IconData pencil = edit;
+
   // END GENERATED ICON DATA
 }
 

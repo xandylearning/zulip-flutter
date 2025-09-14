@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../api/model/model.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/autocomplete.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
+import 'app_bar.dart';
 import 'color.dart';
 import 'icons.dart';
 import 'page.dart';
@@ -14,22 +16,56 @@ import 'theme.dart';
 import 'user.dart';
 
 void showNewDmSheet(BuildContext context, OnDmSelectCallback onDmSelect) {
-  final pageContext = PageRoot.contextOf(context);
-  final store = PerAccountStoreWidget.of(context);
-  showModalBottomSheet<void>(
-    context: pageContext,
-    clipBehavior: Clip.antiAlias,
-    useSafeArea: true,
-    isScrollControlled: true,
-    builder: (BuildContext context) => Padding(
-      // By default, when software keyboard is opened, the ListView
-      // expands behind the software keyboard — resulting in some
-      // list entries being covered by the keyboard. Add explicit
-      // bottom padding the size of the keyboard, which fixes this.
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: PerAccountStoreWidget(
-        accountId: store.accountId,
-        child: NewDmPicker(onDmSelect: onDmSelect))));
+  Navigator.of(context).push(
+    MaterialAccountWidgetRoute(
+      context: context,
+      page: NewDmPage(onDmSelect: onDmSelect),
+    ),
+  );
+}
+
+class NewDmPage extends StatelessWidget {
+  const NewDmPage({super.key, required this.onDmSelect});
+
+  final OnDmSelectCallback onDmSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final designVariables = DesignVariables.of(context);
+
+    return Scaffold(
+      backgroundColor: designVariables.mainBackground,
+      appBar: AppBar(
+        title: Text(
+          zulipLocalizations.newDmSheetScreenTitle,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: colorScheme.primary,
+          ),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(context).pop();
+          },
+        ),
+        backgroundColor: designVariables.bgTopBar,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      body: NewDmPicker(onDmSelect: (narrow) {
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).pop();
+        onDmSelect(narrow);
+      }),
+    );
+  }
 }
 
 @visibleForTesting
@@ -135,88 +171,157 @@ class _NewDmPickerState extends State<NewDmPicker> with PerAccountStoreAwareStat
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _NewDmHeader(selectedUserIds: selectedUserIds, onDmSelect: widget.onDmSelect),
-      _NewDmSearchBar(
-        controller: searchController,
-        selectedUserIds: selectedUserIds,
-        unselectUser: _unselectUser),
-      Expanded(
-        child: _NewDmUserList(
-          filteredUsers: filteredUsers,
-          selectedUserIds: selectedUserIds,
-          scrollController: resultsScrollController,
-          onUserTapped: (userId) => _handleUserTap(userId))),
-    ]);
+    final designVariables = DesignVariables.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: designVariables.mainBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _NewDmSearchBar(
+              controller: searchController,
+              selectedUserIds: selectedUserIds,
+              unselectUser: _unselectUser,
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: _NewDmUserList(
+                filteredUsers: filteredUsers,
+                selectedUserIds: selectedUserIds,
+                scrollController: resultsScrollController,
+                onUserTapped: (userId) => _handleUserTap(userId),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _ComposeButton(
+              selectedUserIds: selectedUserIds,
+              onDmSelect: widget.onDmSelect,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-class _NewDmHeader extends StatelessWidget {
-  const _NewDmHeader({required this.selectedUserIds, required this.onDmSelect});
+class _ComposeButton extends StatefulWidget {
+  const _ComposeButton({required this.selectedUserIds, required this.onDmSelect});
 
   final Set<int> selectedUserIds;
   final OnDmSelectCallback onDmSelect;
 
-  Widget _buildCancelButton(BuildContext context) {
-    final designVariables = DesignVariables.of(context);
-    final zulipLocalizations = ZulipLocalizations.of(context);
+  @override
+  State<_ComposeButton> createState() => _ComposeButtonState();
+}
 
-    return GestureDetector(
-      onTap: Navigator.of(context).pop,
-      child: Text(zulipLocalizations.dialogCancel, style: TextStyle(
-        color: designVariables.icon,
-        fontSize: 20,
-        height: 30 / 20)));
+class _ComposeButtonState extends State<_ComposeButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
   }
 
-  Widget _buildComposeButton(BuildContext context) {
-    final designVariables = DesignVariables.of(context);
-    final zulipLocalizations = ZulipLocalizations.of(context);
-
-    final color = selectedUserIds.isEmpty
-      ? designVariables.icon.withFadedAlpha(0.5)
-      : designVariables.icon;
-
-    return GestureDetector(
-      onTap: selectedUserIds.isEmpty ? null : () {
-        final store = PerAccountStoreWidget.of(context);
-        final narrow = DmNarrow.withUsers(
-          selectedUserIds.toList(),
-          selfUserId: store.selfUserId);
-        onDmSelect(narrow);
-      },
-      child: Text(zulipLocalizations.newDmSheetComposeButtonLabel,
-        style: TextStyle(
-          color: color,
-          fontSize: 20,
-          height: 30 / 20,
-        ).merge(weightVariableTextStyle(context, wght: 600))));
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final zulipLocalizations = ZulipLocalizations.of(context);
 
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 8, 6),
-      child: Row(children: [
-        _buildCancelButton(context),
-        SizedBox(width: 8),
-        Expanded(child: Text(zulipLocalizations.newDmSheetScreenTitle,
-          style: TextStyle(
-            color: designVariables.title,
-            fontSize: 20,
-            height: 30 / 20,
-          ).merge(weightVariableTextStyle(context, wght: 600)),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          textAlign: TextAlign.center)),
-        SizedBox(width: 8),
-        _buildComposeButton(context),
-      ]));
+    final isEnabled = widget.selectedUserIds.isNotEmpty;
+
+    return GestureDetector(
+      onTapDown: isEnabled ? (_) => _controller.forward() : null,
+      onTapUp: isEnabled ? (_) => _controller.reverse() : null,
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: isEnabled ? _scaleAnimation.value : 1.0,
+            child: Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: isEnabled
+                    ? LinearGradient(
+                        colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isEnabled ? null : colorScheme.outline.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isEnabled
+                    ? [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: isEnabled
+                      ? () {
+                          HapticFeedback.mediumImpact();
+                          final store = PerAccountStoreWidget.of(context);
+                          final narrow = DmNarrow.withUsers(
+                            widget.selectedUserIds.toList(),
+                            selfUserId: store.selfUserId,
+                          );
+                          widget.onDmSelect(narrow);
+                        }
+                      : null,
+                  child: Center(
+                    child: Text(
+                      zulipLocalizations.newDmSheetComposeButtonLabel,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isEnabled ? Colors.white : colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
+
+
 
 class _NewDmSearchBar extends StatelessWidget {
   const _NewDmSearchBar({
@@ -244,36 +349,62 @@ class _NewDmSearchBar extends StatelessWidget {
       cursorColor: designVariables.foreground,
       style: TextStyle(
         color: designVariables.textMessage,
-        fontSize: 17,
-        height: 22 / 17),
+        fontSize: 16,
+        height: 20 / 16,
+        fontWeight: FontWeight.w500,
+      ),
       scrollPadding: EdgeInsets.zero,
       decoration: InputDecoration(
         isDense: true,
-        contentPadding: EdgeInsets.zero,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4),
         border: InputBorder.none,
         hintText: hintText,
         hintStyle: TextStyle(
           color: designVariables.labelSearchPrompt,
-          fontSize: 17,
-          height: 22 / 17)));
+          fontSize: 16,
+          height: 20 / 16,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 124),
-      decoration: BoxDecoration(color: designVariables.bgSearchInput),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: designVariables.bgSearchInput,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.transparent,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: SingleChildScrollView(
         reverse: true,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
+            spacing: 8,
+            runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              Icon(
+                Icons.search,
+                color: designVariables.labelSearchPrompt,
+                size: 20,
+              ),
               for (final userId in selectedUserIds)
                 _SelectedUserChip(userId: userId, unselectUser: unselectUser),
               // The IntrinsicWidth lets the text field participate in the Wrap
@@ -281,7 +412,11 @@ class _NewDmSearchBar extends StatelessWidget {
               // by preventing it from expanding to fill the available width.  See:
               //   https://github.com/zulip/zulip-flutter/pull/1322#discussion_r2094112488
               IntrinsicWidth(child: _buildSearchField(context)),
-            ]))));
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -297,32 +432,67 @@ class _SelectedUserChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final store = PerAccountStoreWidget.of(context);
     final clampedTextScaler = MediaQuery.textScalerOf(context)
       .clamp(maxScaleFactor: 1.5);
 
     return GestureDetector(
-      onTap: () => unselectUser(userId),
-      child: DecoratedBox(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        unselectUser(userId);
+      },
+      child: Container(
         decoration: BoxDecoration(
-          color: designVariables.bgMenuButtonSelected,
-          borderRadius: BorderRadius.circular(3)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Avatar(userId: userId, size: clampedTextScaler.scale(22), borderRadius: 3),
-          Flexible(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(5, 3, 4, 3),
-              child: Text(store.userDisplayName(userId),
-                textScaler: clampedTextScaler,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 16 / 16,
-                  color: designVariables.labelMenuButton)))),
-          UserStatusEmoji(userId: userId, size: 16,
-            padding: EdgeInsetsDirectional.only(end: 4)),
-        ])));
+          gradient: LinearGradient(
+            colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Avatar(
+                userId: userId,
+                size: clampedTextScaler.scale(20),
+                borderRadius: 10,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  store.userDisplayName(userId),
+                  textScaler: clampedTextScaler,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -342,41 +512,75 @@ class _NewDmUserList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final designVariables = DesignVariables.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final zulipLocalizations = ZulipLocalizations.of(context);
 
     if (filteredUsers.isEmpty) {
       // TODO(design): Missing in Figma.
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            textAlign: TextAlign.center,
-            zulipLocalizations.newDmSheetNoUsersFound,
-            style: TextStyle(
-              color: designVariables.labelMenuButton,
-              fontSize: 16))));
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.person_search,
+                size: 64,
+                color: designVariables.labelMenuButton.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                zulipLocalizations.newDmSheetNoUsersFound,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: designVariables.labelMenuButton.withValues(alpha: 0.7),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: CustomScrollView(controller: scrollController, slivers: [
-        SliverPadding(
-          padding: EdgeInsets.only(top: 8),
-          sliver: SliverSafeArea(
-            minimum: EdgeInsets.only(bottom: 8),
-            sliver: SliverList.builder(
-              itemCount: filteredUsers.length,
-              itemBuilder: (context, index) {
-                final user = filteredUsers[index];
-                final isSelected = selectedUserIds.contains(user.userId);
+    return Container(
+      decoration: BoxDecoration(
+        color: designVariables.bgMessageRegular,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(8),
+              sliver: SliverList.builder(
+                itemCount: filteredUsers.length,
+                itemBuilder: (context, index) {
+                  final user = filteredUsers[index];
+                  final isSelected = selectedUserIds.contains(user.userId);
 
-                return _NewDmUserListItem(
-                  userId: user.userId,
-                  isSelected: isSelected,
-                  onTapped: onUserTapped,
-                );
-              }))),
-        ]));
+                  return _NewDmUserListItem(
+                    userId: user.userId,
+                    isSelected: isSelected,
+                    onTapped: onUserTapped,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -395,41 +599,91 @@ class _NewDmUserListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
-    return Material(
-      clipBehavior: Clip.antiAlias,
-      borderRadius: BorderRadius.circular(10),
-      color: isSelected
-        ? designVariables.bgMenuButtonSelected
-        : Colors.transparent,
-      child: InkWell(
-        highlightColor: designVariables.bgMenuButtonSelected,
-        splashFactory: NoSplash.splashFactory,
-        onTap: () => onTapped(userId),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 6, 12, 6),
-          child: Row(children: [
-            SizedBox(width: 8),
-            isSelected
-              ? Icon(size: 24,
-                  color: designVariables.radioFillSelected,
-                  ZulipIcons.check_circle_checked)
-              : Icon(size: 24,
-                  color: designVariables.radioBorder,
-                  ZulipIcons.check_circle_unchecked),
-            SizedBox(width: 10),
-            Avatar(userId: userId, size: 32, borderRadius: 3),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text.rich(
-                TextSpan(text: store.userDisplayName(userId), children: [
-                  UserStatusEmoji.asWidgetSpan(userId: userId, fontSize: 17,
-                    textScaler: MediaQuery.textScalerOf(context)),
-                ]),
-                style: TextStyle(
-                  fontSize: 17,
-                  height: 19 / 17,
-                  color: designVariables.textMessage,
-                ).merge(weightVariableTextStyle(context, wght: 500)))),
-          ]))));
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: isSelected
+            ? colorScheme.primary.withValues(alpha: 0.1)
+            : Colors.transparent,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTapped(userId);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? colorScheme.primary : designVariables.radioBorder,
+                      width: 2,
+                    ),
+                    color: isSelected ? colorScheme.primary : Colors.transparent,
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Hero(
+                  tag: 'user_avatar_$userId',
+                  child: Avatar(userId: userId, size: 40, borderRadius: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          text: store.userDisplayName(userId),
+                          children: [
+                            UserStatusEmoji.asWidgetSpan(
+                              userId: userId,
+                              fontSize: 16,
+                              textScaler: MediaQuery.textScalerOf(context),
+                            ),
+                          ],
+                        ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: designVariables.textMessage,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '@${store.getUser(userId)?.email.split('@').first ?? 'user'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: designVariables.textMessageMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
