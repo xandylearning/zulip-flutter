@@ -171,7 +171,10 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
     super.keepScrollOffset,
     super.oldPosition,
     super.debugLabel,
+    this.isDmNarrow = false,
   });
+
+  final bool isDmNarrow;
 
   // TODO(upstream): is the lack of [absorb] a bug in [_TabBarScrollPosition]?
   @override
@@ -245,13 +248,11 @@ class MessageListScrollPosition extends ScrollPositionWithSingleContext {
 
     if (!_hasEverCompletedLayout) {
       // The list is being laid out for the first time (its first performLayout).
-      // Start out scrolled down so the bottom sliver (the new messages)
-      // occupies 75% of the viewport,
-      // or at the in-range scroll position closest to that.
-      // This also brings [pixels] within bounds, which
-      // the initial value of 0.0 might not have been.
-      final target = clampDouble(0.75 * viewportDimension,
-        minScrollExtent, maxScrollExtent);
+      // For DM conversations, start at the very bottom to show latest messages.
+      // For other conversations, start at 75% of the viewport.
+      final target = isDmNarrow
+          ? maxScrollExtent  // Scroll to bottom for DM conversations
+          : clampDouble(0.75 * viewportDimension, minScrollExtent, maxScrollExtent);
       if (!hasPixels || pixels != target) {
         correctPixels(target);
         changed = true;
@@ -328,7 +329,10 @@ class MessageListScrollController extends ScrollController {
     super.debugLabel,
     super.onAttach,
     super.onDetach,
+    this.isDmNarrow = false,
   });
+
+  final bool isDmNarrow;
 
   @override
   MessageListScrollPosition get position => super.position as MessageListScrollPosition;
@@ -343,6 +347,7 @@ class MessageListScrollController extends ScrollController {
       keepScrollOffset: keepScrollOffset,
       oldPosition: oldPosition,
       debugLabel: debugLabel,
+      isDmNarrow: isDmNarrow,
     );
   }
 }

@@ -317,8 +317,8 @@ class _MessageListPageState extends State<MessageListPage> implements MessageLis
     } else if (widget.initAnchorMessageId != null) {
       initAnchor = NumericAnchor(widget.initAnchorMessageId!);
     } else if (narrow is DmNarrow) {
-      // For DM views, always start from oldest (top) to show chronological order
-      initAnchor = AnchorCode.oldest;
+      // For DM views, start from newest (bottom) to show latest messages first
+      initAnchor = AnchorCode.newest;
     } else {
       final globalSettings = GlobalStoreWidget.settingsOf(context);
       final useFirstUnread = globalSettings.shouldVisitFirstUnread(narrow: narrow);
@@ -899,13 +899,15 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
   MessageListView get model => _model!;
   MessageListView? _model;
 
-  final MessageListScrollController scrollController = MessageListScrollController();
+  late final MessageListScrollController scrollController;
 
   final ValueNotifier<bool> _scrollToBottomVisible = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
+    final isDmNarrow = widget.narrow is DmNarrow;
+    scrollController = MessageListScrollController(isDmNarrow: isDmNarrow);
     scrollController.addListener(_scrollChanged);
   }
 
@@ -2406,7 +2408,9 @@ class _MessageWithPossibleSenderState extends State<MessageWithPossibleSender>
 
     // Start animation when message appears
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _animationController.forward();
+      if (mounted) {
+        _animationController.forward();
+      }
     });
   }
 
