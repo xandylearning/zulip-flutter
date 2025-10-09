@@ -76,3 +76,30 @@ Map<String, dynamic> _$RemoveFcmMessageToJson(RemoveFcmMessage instance) =>
         instance.zulipMessageIds,
       ),
     };
+
+CallFcmMessage _$CallFcmMessageFromJson(Map<String, dynamic> json) =>
+    CallFcmMessage(
+      server: json['server'] as String,
+      realmId: const _IntConverter().fromJson(json['realm_id'] as String),
+      realmUrl: Uri.parse(
+        FcmMessageWithIdentity._readRealmUrl(json, 'realm_url') as String,
+      ),
+      userId: const _IntConverter().fromJson(json['user_id'] as String),
+      callId: json['call_id'] as String,
+      senderFullName: json['sender_full_name'] as String,
+      callType: json['call_type'] as String,
+      jitsiUrl: json['jitsi_url'] as String,
+    );
+
+Map<String, dynamic> _$CallFcmMessageToJson(CallFcmMessage instance) =>
+    <String, dynamic>{
+      'server': instance.server,
+      'realm_id': const _IntConverter().toJson(instance.realmId),
+      'realm_url': instance.realmUrl.toString(),
+      'user_id': const _IntConverter().toJson(instance.userId),
+      'event': instance.type,
+      'call_id': instance.callId,
+      'sender_full_name': instance.senderFullName,
+      'call_type': instance.callType,
+      'jitsi_url': instance.jitsiUrl,
+    };
