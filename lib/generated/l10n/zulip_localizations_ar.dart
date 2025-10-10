@@ -1138,4 +1138,16 @@ class ZulipLocalizationsAr extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get incomingVideoCall => 'Incoming video call';
+
+  @override
+  String get incomingAudioCall => 'Incoming audio call';
+
+  @override
+  String get accept => 'Accept';
+
+  @override
+  String get decline => 'Decline';
 }

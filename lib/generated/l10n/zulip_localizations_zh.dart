@@ -1138,6 +1138,18 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get incomingVideoCall => 'Incoming video call';
+
+  @override
+  String get incomingAudioCall => 'Incoming audio call';
+
+  @override
+  String get accept => 'Accept';
+
+  @override
+  String get decline => 'Decline';
 }
 
 /// The translations for Chinese, as used in China, using the Han script (`zh_Hans_CN`).

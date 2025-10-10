@@ -2004,6 +2004,30 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Zulip'**
   String get zulipAppTitle;
+
+  /// Label for incoming video call on wake-up screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming video call'**
+  String get incomingVideoCall;
+
+  /// Label for incoming audio call on wake-up screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming audio call'**
+  String get incomingAudioCall;
+
+  /// Label for accept button on incoming call screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get accept;
+
+  /// Label for decline button on incoming call screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get decline;
 }
 
 class _ZulipLocalizationsDelegate
