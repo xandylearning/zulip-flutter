@@ -2028,6 +2028,54 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Decline'**
   String get decline;
+
+  /// Status text when initiating a call.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling...'**
+  String get callStatusCalling;
+
+  /// Status text when the call is ringing.
+  ///
+  /// In en, this message translates to:
+  /// **'Ringing...'**
+  String get callStatusRinging;
+
+  /// Status text when the call is being connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get callStatusConnecting;
+
+  /// Status text when the call was declined.
+  ///
+  /// In en, this message translates to:
+  /// **'Call declined'**
+  String get callStatusDeclined;
+
+  /// Status text when the call was cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Call cancelled'**
+  String get callStatusCancelled;
+
+  /// Status text when the call has ended.
+  ///
+  /// In en, this message translates to:
+  /// **'Call ended'**
+  String get callStatusEnded;
+
+  /// Label for video call type.
+  ///
+  /// In en, this message translates to:
+  /// **'Video call'**
+  String get videoCall;
+
+  /// Label for audio call type.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio call'**
+  String get audioCall;
 }
 
 class _ZulipLocalizationsDelegate

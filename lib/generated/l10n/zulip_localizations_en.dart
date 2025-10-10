@@ -1150,6 +1150,30 @@ class ZulipLocalizationsEn extends ZulipLocalizations {
 
   @override
   String get decline => 'Decline';
+
+  @override
+  String get callStatusCalling => 'Calling...';
+
+  @override
+  String get callStatusRinging => 'Ringing...';
+
+  @override
+  String get callStatusConnecting => 'Connecting...';
+
+  @override
+  String get callStatusDeclined => 'Call declined';
+
+  @override
+  String get callStatusCancelled => 'Call cancelled';
+
+  @override
+  String get callStatusEnded => 'Call ended';
+
+  @override
+  String get videoCall => 'Video call';
+
+  @override
+  String get audioCall => 'Audio call';
 }
 
 /// The translations for English, as used in the United Kingdom (`en_GB`).
