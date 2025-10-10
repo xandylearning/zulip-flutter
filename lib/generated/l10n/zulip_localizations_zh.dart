@@ -1174,6 +1174,17 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get audioCall => 'Audio call';
+
+  @override
+  String get callIndicatorOngoingVideo => 'Ongoing video call';
+
+  @override
+  String get callIndicatorOngoingAudio => 'Ongoing audio call';
+
+  @override
+  String callIndicatorRinging(String name) {
+    return 'Calling $name...';
+  }
 }
 
 /// The translations for Chinese, as used in China, using the Han script (`zh_Hans_CN`).

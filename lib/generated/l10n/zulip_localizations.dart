@@ -2076,6 +2076,24 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Audio call'**
   String get audioCall;
+
+  /// Text shown in persistent call indicator for ongoing video call.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing video call'**
+  String get callIndicatorOngoingVideo;
+
+  /// Text shown in persistent call indicator for ongoing audio call.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing audio call'**
+  String get callIndicatorOngoingAudio;
+
+  /// Text shown in persistent call indicator when calling someone.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling {name}...'**
+  String callIndicatorRinging(String name);
 }
 
 class _ZulipLocalizationsDelegate

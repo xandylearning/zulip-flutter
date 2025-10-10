@@ -1193,4 +1193,15 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get audioCall => 'Audio call';
+
+  @override
+  String get callIndicatorOngoingVideo => 'Ongoing video call';
+
+  @override
+  String get callIndicatorOngoingAudio => 'Ongoing audio call';
+
+  @override
+  String callIndicatorRinging(String name) {
+    return 'Calling $name...';
+  }
 }
