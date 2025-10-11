@@ -15,7 +15,7 @@ Call _$CallFromJson(Map<String, dynamic> json) => Call(
   callType: $enumDecode(_$CallTypeEnumMap, json['call_type']),
   status: $enumDecode(_$CallStatusEnumMap, json['status']),
   jitsiUrl: json['jitsi_url'] as String,
-  timestamp: (json['timestamp'] as num).toInt(),
+  timestamp: (json['timestamp'] as num?)?.toInt(),
   duration: (json['duration'] as num?)?.toInt(),
 );
 

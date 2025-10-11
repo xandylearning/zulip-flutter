@@ -968,7 +968,7 @@ CallAcknowledgedEvent _$CallAcknowledgedEventFromJson(
 ) => CallAcknowledgedEvent(
   id: (json['id'] as num).toInt(),
   callId: json['call_id'] as String,
-  userId: (json['user_id'] as num).toInt(),
+  userId: _parseIntFromString(json['user_id']),
 );
 
 Map<String, dynamic> _$CallAcknowledgedEventToJson(
@@ -985,7 +985,7 @@ CallAcceptedEvent _$CallAcceptedEventFromJson(Map<String, dynamic> json) =>
     CallAcceptedEvent(
       id: (json['id'] as num).toInt(),
       callId: json['call_id'] as String,
-      userId: (json['user_id'] as num).toInt(),
+      userId: _parseIntFromString(json['user_id']),
     );
 
 Map<String, dynamic> _$CallAcceptedEventToJson(CallAcceptedEvent instance) =>
@@ -1001,7 +1001,7 @@ CallDeclinedEvent _$CallDeclinedEventFromJson(Map<String, dynamic> json) =>
     CallDeclinedEvent(
       id: (json['id'] as num).toInt(),
       callId: json['call_id'] as String,
-      userId: (json['user_id'] as num).toInt(),
+      userId: _parseIntFromString(json['user_id']),
     );
 
 Map<String, dynamic> _$CallDeclinedEventToJson(CallDeclinedEvent instance) =>
@@ -1033,7 +1033,7 @@ CallCancelledEvent _$CallCancelledEventFromJson(Map<String, dynamic> json) =>
     CallCancelledEvent(
       id: (json['id'] as num).toInt(),
       callId: json['call_id'] as String,
-      userId: (json['user_id'] as num).toInt(),
+      userId: _parseIntFromString(json['user_id']),
     );
 
 Map<String, dynamic> _$CallCancelledEventToJson(CallCancelledEvent instance) =>

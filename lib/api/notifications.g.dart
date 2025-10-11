@@ -11,11 +11,13 @@ part of 'notifications.dart';
 MessageFcmMessage _$MessageFcmMessageFromJson(Map<String, dynamic> json) =>
     MessageFcmMessage(
       server: json['server'] as String,
-      realmId: const _IntConverter().fromJson(json['realm_id'] as String),
+      realmId: FcmMessageWithIdentity._parseIntWithDefaultRealmId(
+        json['realm_id'],
+      ),
       realmUrl: Uri.parse(
         FcmMessageWithIdentity._readRealmUrl(json, 'realm_url') as String,
       ),
-      userId: const _IntConverter().fromJson(json['user_id'] as String),
+      userId: FcmMessageWithIdentity._parseIntFromString(json['user_id']),
       senderId: const _IntConverter().fromJson(json['sender_id'] as String),
       senderAvatarUrl: Uri.parse(json['sender_avatar_url'] as String),
       senderFullName: json['sender_full_name'] as String,
@@ -55,11 +57,13 @@ FcmMessageChannelRecipient _$FcmMessageChannelRecipientFromJson(
 RemoveFcmMessage _$RemoveFcmMessageFromJson(Map<String, dynamic> json) =>
     RemoveFcmMessage(
       server: json['server'] as String,
-      realmId: const _IntConverter().fromJson(json['realm_id'] as String),
+      realmId: FcmMessageWithIdentity._parseIntWithDefaultRealmId(
+        json['realm_id'],
+      ),
       realmUrl: Uri.parse(
         FcmMessageWithIdentity._readRealmUrl(json, 'realm_url') as String,
       ),
-      userId: const _IntConverter().fromJson(json['user_id'] as String),
+      userId: FcmMessageWithIdentity._parseIntFromString(json['user_id']),
       zulipMessageIds: const _IntListConverter().fromJson(
         json['zulip_message_ids'] as String,
       ),
@@ -80,26 +84,34 @@ Map<String, dynamic> _$RemoveFcmMessageToJson(RemoveFcmMessage instance) =>
 CallFcmMessage _$CallFcmMessageFromJson(Map<String, dynamic> json) =>
     CallFcmMessage(
       server: json['server'] as String,
-      realmId: const _IntConverter().fromJson(json['realm_id'] as String),
+      realmId: FcmMessageWithIdentity._parseIntWithDefaultRealmId(
+        json['realm_id'],
+      ),
       realmUrl: Uri.parse(
         FcmMessageWithIdentity._readRealmUrl(json, 'realm_url') as String,
       ),
-      userId: const _IntConverter().fromJson(json['user_id'] as String),
+      userId: FcmMessageWithIdentity._parseIntFromString(json['user_id']),
       callId: json['call_id'] as String,
-      senderFullName: json['sender_full_name'] as String,
+      senderFullName: json['sender_full_name'] as String?,
       callType: json['call_type'] as String,
-      jitsiUrl: json['jitsi_url'] as String,
+      jitsiUrl: json['jitsi_url'] as String?,
+      senderId: CallFcmMessage._parseIntNullable(json['sender_id']),
+      timeoutSeconds: json['timeout_seconds'] == null
+          ? 120
+          : CallFcmMessage._parseIntWithDefault(json['timeout_seconds']),
     );
 
 Map<String, dynamic> _$CallFcmMessageToJson(CallFcmMessage instance) =>
     <String, dynamic>{
       'server': instance.server,
-      'realm_id': const _IntConverter().toJson(instance.realmId),
+      'realm_id': instance.realmId,
       'realm_url': instance.realmUrl.toString(),
-      'user_id': const _IntConverter().toJson(instance.userId),
+      'user_id': instance.userId,
       'event': instance.type,
       'call_id': instance.callId,
       'sender_full_name': instance.senderFullName,
       'call_type': instance.callType,
       'jitsi_url': instance.jitsiUrl,
+      'sender_id': instance.senderId,
+      'timeout_seconds': instance.timeoutSeconds,
     };
