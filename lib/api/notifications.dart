@@ -1,6 +1,8 @@
+import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
+import '../log.dart';
 import 'model/model.dart';
 
 part 'notifications.g.dart';
@@ -27,10 +29,48 @@ sealed class FcmMessage {
   FcmMessage();
 
   factory FcmMessage.fromJson(Map<String, dynamic> json) {
-    switch (json['event']) {
-      case 'message': return MessageFcmMessage.fromJson(json);
-      case 'remove': return RemoveFcmMessage.fromJson(json);
-      default: return UnexpectedFcmMessage.fromJson(json);
+    // Check if the data is wrapped in a 'custom' object (for call notifications)
+    Map<String, dynamic> data;
+    if (json.containsKey('custom')) {
+      final custom = json['custom'];
+      if (custom is String) {
+        // Parse Python dict string: convert single quotes to double quotes
+        // and handle Python's None -> null
+        try {
+          String jsonStr = custom
+              .replaceAll("'", '"')  // Convert single quotes to double quotes
+              .replaceAll('None', 'null');  // Convert Python None to JSON null
+          assert(debugLog('FCM MESSAGE PARSING - Parsed custom string: $jsonStr'));
+          data = Map<String, dynamic>.from(jsonDecode(jsonStr) as Map);
+        } catch (e) {
+          assert(debugLog('FCM MESSAGE PARSING - Failed to parse custom string: $e'));
+          data = {};
+        }
+      } else {
+        data = Map<String, dynamic>.from(custom as Map);
+      }
+    } else {
+      data = json;
+    }
+
+    final event = data['event'];
+    assert(debugLog('FCM MESSAGE PARSING - Event type: $event'));
+    assert(debugLog('FCM MESSAGE PARSING - Full JSON: $json'));
+    assert(debugLog('FCM MESSAGE PARSING - Extracted data: $data'));
+
+    switch (event) {
+      case 'message':
+        assert(debugLog('FCM MESSAGE PARSING - Creating MessageFcmMessage'));
+        return MessageFcmMessage.fromJson(data);
+      case 'remove':
+        assert(debugLog('FCM MESSAGE PARSING - Creating RemoveFcmMessage'));
+        return RemoveFcmMessage.fromJson(data);
+      case 'call':
+        assert(debugLog('FCM MESSAGE PARSING - Creating CallFcmMessage'));
+        return CallFcmMessage.fromJson(data);
+      default:
+        assert(debugLog('FCM MESSAGE PARSING - Unknown event type: $event, creating UnexpectedFcmMessage'));
+        return UnexpectedFcmMessage.fromJson(json);
     }
   }
 
@@ -60,6 +100,7 @@ sealed class FcmMessageWithIdentity extends FcmMessage {
   final String server;
 
   /// The realm's ID within the server.
+  @JsonKey(fromJson: _parseIntWithDefaultRealmId)
   final int realmId;
 
   /// The realm's own URL.
@@ -73,6 +114,7 @@ sealed class FcmMessageWithIdentity extends FcmMessage {
   ///
   /// Useful mainly in the case where the user has multiple accounts in the
   /// same realm.
+  @JsonKey(fromJson: _parseIntFromString)
   final int userId;
 
   FcmMessageWithIdentity({
@@ -85,6 +127,21 @@ sealed class FcmMessageWithIdentity extends FcmMessage {
   // TODO(server-9): FL 257 deprecated 'realm_uri' in favor of 'realm_url'.
   static String _readRealmUrl(Map<dynamic, dynamic> json, String key) {
     return (json['realm_url'] ?? json['realm_uri']) as String;
+  }
+
+  /// Custom converter for realm ID with default value
+  static int _parseIntWithDefaultRealmId(dynamic value) {
+    if (value == null) return 1; // Default realm ID
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 1;
+    return 1;
+  }
+
+  /// Custom converter for parsing integers from strings
+  static int _parseIntFromString(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.parse(value);
+    throw Exception('Cannot parse userId from $value');
   }
 }
 
@@ -256,6 +313,70 @@ class RemoveFcmMessage extends FcmMessageWithIdentity {
     final result = _$RemoveFcmMessageToJson(this);
     result['realm_uri'] = realmUrl.toString(); // TODO(server-9): deprecated in FL 257
     return result;
+  }
+}
+
+/// An FCM message with event type `call`.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class CallFcmMessage extends FcmMessageWithIdentity {
+  @JsonKey(includeToJson: true, name: 'event')
+  String get type => 'call';
+
+  final String callId;
+  final String? senderFullName;
+  final String? callType; // 'audio' or 'video' or null
+  final String? jitsiUrl;
+  @JsonKey(fromJson: _parseIntNullable)
+  final int? senderId;
+  @JsonKey(fromJson: _parseIntWithDefault)
+  final int timeoutSeconds;
+
+  CallFcmMessage({
+    required super.server,
+    required super.realmId,
+    required super.realmUrl,
+    required super.userId,
+    required this.callId,
+    this.senderFullName,
+    this.callType,
+    this.jitsiUrl,
+    this.senderId,
+    this.timeoutSeconds = 120,
+  });
+
+  factory CallFcmMessage.fromJson(Map<String, dynamic> json) {
+    assert(json['event'] == 'call');
+    assert(debugLog('CALL FCM PARSING - Raw JSON: $json'));
+    assert(debugLog('CALL FCM PARSING - Call ID: ${json['call_id']}'));
+    assert(debugLog('CALL FCM PARSING - Sender: ${json['sender_full_name']}'));
+    assert(debugLog('CALL FCM PARSING - Call Type: ${json['call_type']}'));
+    assert(debugLog('CALL FCM PARSING - Jitsi URL: ${json['jitsi_url']}'));
+    assert(debugLog('CALL FCM PARSING - Realm URL: ${json['realm_url'] ?? json['realm_uri']}'));
+    assert(debugLog('CALL FCM PARSING - User ID: ${json['user_id']}'));
+    return _$CallFcmMessageFromJson(json);
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final result = _$CallFcmMessageToJson(this);
+    result['realm_uri'] = realmUrl.toString(); // TODO(server-9): deprecated in FL 257
+    return result;
+  }
+
+  /// Custom converter for nullable int parsing
+  static int? _parseIntNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  /// Custom converter for int with default value
+  static int _parseIntWithDefault(dynamic value) {
+    if (value == null) return 120; // Default timeout
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 120;
+    return 120;
   }
 }
 

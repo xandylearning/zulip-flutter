@@ -42,7 +42,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>By allowing camera access, you can take photos and send them in Zulip messages.</string>
+	<string>Camera access is required for video calls</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access is required for audio and video calls</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose photos from your library and send them in Zulip messages.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

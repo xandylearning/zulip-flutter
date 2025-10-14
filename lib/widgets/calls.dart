@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../api/model/call.dart';
 import '../api/model/model.dart';
-import '../generated/l10n/zulip_localizations.dart';
-import 'icons.dart';
+import '../api/route/calls.dart' as api;
+import '../model/call_permissions.dart';
+import '../model/store.dart';
+import 'call_dialing_screen.dart';
 import 'page.dart';
 import 'store.dart';
 import 'user.dart';
@@ -17,74 +20,105 @@ class CallsPageBody extends StatefulWidget {
 
 class _CallsPageBodyState extends State<CallsPageBody>
     with PerAccountStoreAwareStateMixin<CallsPageBody> {
+  PerAccountStore? _store;
 
   @override
   void onNewStore() {
-    // TODO: Listen to call-related models when implemented
+    _store = PerAccountStoreWidget.of(context);
+    _store!.callStore.addListener(_onCallStoreChange);
+  }
+
+  void _onCallStoreChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _store?.callStore.removeListener(_onCallStoreChange);
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    final store = PerAccountStoreWidget.of(context);
+    await store.callStore.loadCallHistory();
   }
 
   @override
   Widget build(BuildContext context) {
-    final zulipLocalizations = ZulipLocalizations.of(context);
+    final store = PerAccountStoreWidget.of(context);
+    final callHistory = store.callStore.callHistory;
+    final isLoading = store.callStore.isLoadingHistory;
 
-    // Mock call log data - in a real app, this would come from a database or API
-    final callLogEntries = _getMockCallLog();
+    // Show loading indicator if first load and no history yet
+    if (isLoading && callHistory.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-    if (callLogEntries.isEmpty) {
-      return Center(
-        child: PageBodyEmptyContentPlaceholder(
-          message: 'No call history yet',
+    // Show empty state if no history
+    if (callHistory.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 200),
+            Center(
+              child: PageBodyEmptyContentPlaceholder(
+                message: 'No call history yet',
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: callLogEntries.length,
-      itemBuilder: (context, index) {
-        final entry = callLogEntries[index];
-        return _CallLogItem(entry: entry);
-      },
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: callHistory.length,
+        itemBuilder: (context, index) {
+        final call = callHistory[index];
+        final store = PerAccountStoreWidget.of(context);
+        final userId = call.callerId == store.selfUserId ? call.recipientId : call.callerId;
+        final user = store.getUser(userId);
+
+        if (user == null) return const SizedBox.shrink();
+
+        final callLogEntry = CallLogEntry(
+          user: user,
+          callType: _getCallLogType(call),
+          timestamp: DateTime.fromMillisecondsSinceEpoch(call.timestamp! * 1000),
+          duration: call.duration != null ? Duration(seconds: call.duration!) : null,
+        );
+
+        return _CallLogItem(
+          entry: callLogEntry,
+          selfUserId: store.selfUserId,
+        );
+        },
+      ),
     );
   }
 
-  List<CallLogEntry> _getMockCallLog() {
+  CallLogType _getCallLogType(Call call) {
     final store = PerAccountStoreWidget.of(context);
-    final allUsers = store.allUsers.where((user) => user.userId != store.selfUserId).toList();
-
-    if (allUsers.isEmpty) return [];
-
-    // Create mock call log entries
-    return [
-      CallLogEntry(
-        user: allUsers[0],
-        callType: CallType.outgoing,
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        duration: const Duration(minutes: 15, seconds: 30),
-      ),
-      CallLogEntry(
-        user: allUsers.length > 1 ? allUsers[1] : allUsers[0],
-        callType: CallType.incoming,
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        duration: const Duration(minutes: 8, seconds: 45),
-      ),
-      CallLogEntry(
-        user: allUsers.length > 2 ? allUsers[2] : allUsers[0],
-        callType: CallType.missed,
-        timestamp: DateTime.now().subtract(const Duration(days: 2)),
-        duration: null,
-      ),
-      CallLogEntry(
-        user: allUsers.length > 1 ? allUsers[1] : allUsers[0],
-        callType: CallType.incoming,
-        timestamp: DateTime.now().subtract(const Duration(days: 3)),
-        duration: const Duration(minutes: 22, seconds: 10),
-      ),
-    ];
+    if (call.status == CallStatus.cancelled || call.status == CallStatus.declined) {
+      return CallLogType.missed;
+    } else if (call.callerId == store.selfUserId) {
+      return CallLogType.outgoing;
+    } else {
+      return CallLogType.incoming;
+    }
   }
 }
 
-enum CallType {
+enum CallLogType {
   incoming,
   outgoing,
   missed,
@@ -99,34 +133,38 @@ class CallLogEntry {
   });
 
   final User user;
-  final CallType callType;
+  final CallLogType callType;
   final DateTime timestamp;
   final Duration? duration;
 }
 
 class _CallLogItem extends StatelessWidget {
-  const _CallLogItem({required this.entry});
+  const _CallLogItem({
+    required this.entry,
+    required this.selfUserId,
+  });
 
   final CallLogEntry entry;
+  final int selfUserId;
 
   IconData get _callIcon {
     switch (entry.callType) {
-      case CallType.incoming:
+      case CallLogType.incoming:
         return Icons.call_received;
-      case CallType.outgoing:
+      case CallLogType.outgoing:
         return Icons.call_made;
-      case CallType.missed:
+      case CallLogType.missed:
         return Icons.call_received;
     }
   }
 
   Color _getCallIconColor(BuildContext context) {
     switch (entry.callType) {
-      case CallType.incoming:
+      case CallLogType.incoming:
         return const Color(0xFF25D366);
-      case CallType.outgoing:
+      case CallLogType.outgoing:
         return const Color(0xFF808080);
-      case CallType.missed:
+      case CallLogType.missed:
         return Colors.red;
     }
   }
@@ -173,12 +211,16 @@ class _CallLogItem extends StatelessWidget {
             color: _getCallIconColor(context),
           ),
           const SizedBox(width: 4),
-          Text(_formatTimestamp(context)),
+          Flexible(
+            child: Text(_formatTimestamp(context)),
+          ),
           if (entry.duration != null) ...[
             const SizedBox(width: 8),
-            Text('(${_formatDuration()})',
-              style: TextStyle(
-                color: designVariables.labelMenuButton.withOpacity(0.7),
+            Flexible(
+              child: Text('(${_formatDuration()})',
+                style: TextStyle(
+                  color: designVariables.labelMenuButton.withValues(alpha: 0.7),
+                ),
               ),
             ),
           ],
@@ -190,23 +232,91 @@ class _CallLogItem extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.phone, color: const Color(0xFF25D366)),
             iconSize: 24,
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Calling ${entry.user.fullName}...')),
-              );
-            },
+            onPressed: () => _initiateCall(context, entry.user, isVideo: false),
           ),
           IconButton(
             icon: Icon(Icons.videocam, color: const Color(0xFF25D366)),
             iconSize: 24,
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Video calling ${entry.user.fullName}...')),
-              );
-            },
+            onPressed: () => _initiateCall(context, entry.user, isVideo: true),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _initiateCall(BuildContext context, User user, {required bool isVideo}) async {
+    final store = PerAccountStoreWidget.of(context);
+    String? callId;
+
+    // Check permissions first
+    final hasPermission = isVideo
+        ? await CallPermissions.requestVideoCallPermissions(context)
+        : await CallPermissions.requestAudioCallPermissions(context);
+
+    if (!hasPermission) {
+      return;
+    }
+
+    try {
+      debugPrint('Calls: Starting call creation for user ${user.userId}, isVideo: $isVideo');
+
+      // Create the call
+      final response = await api.createCall(
+        store.connection,
+        userId: user.userId,
+        isVideoCall: isVideo,
+      );
+
+      debugPrint('Calls: Call created successfully, callId: ${response.callId}');
+      callId = response.callId;
+
+      if (!context.mounted) {
+        debugPrint('Calls: Context not mounted, aborting');
+        return;
+      }
+
+      // Create Call object from response
+      final call = Call(
+        callId: response.callId,
+        callerId: store.selfUserId,
+        recipientId: user.userId,
+        callType: response.callType == 'video' ? CallType.video : CallType.audio,
+        status: CallStatus.created,
+        jitsiUrl: response.callUrl,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+
+      debugPrint('Calls: Call object created: ${call.callId}');
+      debugPrint('Calls: Call callerId: ${call.callerId}, selfUserId: ${store.selfUserId}');
+
+      // Manually add to pending calls since CallCreatedEvent might not be received
+      debugPrint('Calls: Manually adding call to pending outgoing calls: ${call.callId}');
+      store.callStore.addPendingOutgoingCall(call);
+      debugPrint('Calls: Call added to pending calls successfully');
+
+      // Navigate to dialing screen first
+      await Navigator.of(context).push(
+        CallDialingScreen.buildRoute(
+          accountId: PerAccountStoreWidget.accountIdOf(context),
+          call: call,
+          recipient: user,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      // Cancel the call if it was created but navigation failed
+      if (callId != null) {
+        try {
+          await api.cancelCall(store.connection, callId: callId);
+        } catch (cancelError) {
+          debugPrint('Failed to cancel call after navigation error: $cancelError');
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to initiate call: $e')),
+      );
+    }
   }
 }

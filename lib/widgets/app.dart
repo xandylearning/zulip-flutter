@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../api/core.dart';
+import '../api/model/call.dart';
+import '../api/route/calls.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../log.dart';
 import '../model/actions.dart';
@@ -11,13 +15,18 @@ import '../model/localizations.dart';
 import '../model/store.dart';
 import '../notifications/open.dart';
 import 'about_zulip.dart';
+import 'call_wakeup_screen.dart';
+import 'jitsi_call_screen.dart';
 import 'dialog.dart';
 import 'home.dart';
+import 'incoming_call_listener.dart';
 import 'login.dart';
 import 'page.dart';
+import 'persistent_call_indicator.dart';
 import 'splash_screen.dart';
 import 'store.dart';
 import 'theme.dart';
+import '../notifications/callkit_incoming.dart';
 
 class ZulipApp extends StatefulWidget {
   const ZulipApp({super.key, this.navigatorObservers});
@@ -29,6 +38,79 @@ class ZulipApp extends StatefulWidget {
   /// and then remains true.
   static ValueListenable<bool> get ready => _ready;
   static ValueNotifier<bool> _ready = ValueNotifier(false);
+
+  /// Navigate directly from a zulip://call deep link.
+  ///
+  /// This is a convenience for cases where the platform doesn't route
+  /// [routeInformationUpdated] to us (e.g., from some external UI).
+  static Future<void> navigateCallDeepLink(Uri url) async {
+    try {
+      final navigator = await ZulipApp.navigator;
+      final context = navigator.context;
+      if (!context.mounted) return;
+
+      // Extract call information from URL
+      final callId = url.pathSegments.isNotEmpty ? url.pathSegments.first : null;
+      final realmUrlStr = url.queryParameters['realm_url'];
+      final userIdStr = url.queryParameters['user_id'];
+      final callType = url.queryParameters['call_type'];
+      final jitsiUrl = url.queryParameters['jitsi_url'];
+      final senderIdStr = url.queryParameters['sender_id'];
+
+      if (callId == null || realmUrlStr == null || userIdStr == null ||
+          callType == null || jitsiUrl == null) {
+        return;
+      }
+
+      final realmUrl = Uri.parse(realmUrlStr);
+      final userId = int.parse(userIdStr);
+
+      // Find the account
+      final globalStore = GlobalStoreWidget.of(context);
+      final account = globalStore.accounts.firstWhereOrNull(
+        (account) => account.realmUrl.origin == realmUrl.origin && account.userId == userId);
+      if (account == null) return;
+
+      // Load per-account store if needed
+      final perAccountStore = await globalStore.perAccount(account.id);
+
+      // Try to fetch call details; fall back to constructing one
+      Call? call;
+      try {
+        final response = await getCallStatus(perAccountStore.connection, callId: callId);
+        call = response.call;
+      } catch (_) {}
+
+      if (call == null) {
+        final senderId = senderIdStr != null ? int.tryParse(senderIdStr) ?? 0 : 0;
+        call = Call(
+          callId: callId,
+          callerId: senderId,
+          recipientId: userId,
+          callType: callType == 'video' ? CallType.video : CallType.audio,
+          status: CallStatus.ringing,
+          jitsiUrl: jitsiUrl,
+        );
+      }
+
+      // Capture non-null call and defer navigation to avoid Navigator lock
+      final resolvedCall = call;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        () async {
+          try {
+            await acceptCall(perAccountStore.connection, callId: resolvedCall.callId);
+            // ignore: unawaited_futures
+            navigator.push(
+              JitsiCallScreen.buildRoute(accountId: account.id, call: resolvedCall));
+          } catch (_) {
+            // ignore: unawaited_futures
+            navigator.push(
+              CallWakeUpScreen.buildRoute(accountId: account.id, call: resolvedCall));
+          }
+        }();
+      });
+    } catch (_) {}
+  }
 
   /// The navigator for the whole app.
   ///
@@ -162,12 +244,45 @@ class _ZulipAppState extends State<ZulipApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     UpgradeWelcomeDialog.maybeShow();
+    // Initialize CallKit incoming service and try to consume any accepted call
+    // that launched the app.
+    unawaited(CallKitIncomingService.instance.initialize());
+    unawaited(CallKitIncomingService.instance.maybeConsumeAcceptedCall());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Handle call cleanup when app is killed
+    if (state == AppLifecycleState.detached) {
+      _endAllActiveCalls();
+    }
+
+    // When resuming, consume any accepted call from OS UI
+    if (state == AppLifecycleState.resumed) {
+      unawaited(CallKitIncomingService.instance.maybeConsumeAcceptedCall());
+    }
+  }
+
+  /// End all active calls when app is killed.
+  Future<void> _endAllActiveCalls() async {
+    try {
+      // Get all active accounts and end their calls
+      final globalStore = GlobalStoreWidget.of(context);
+      for (final account in globalStore.accounts) {
+        final perAccountStore = await globalStore.perAccount(account.id);
+        await perAccountStore.callStore.endAllActiveCalls();
+      }
+    } catch (e) {
+      debugPrint('Failed to end active calls on app kill: $e');
+    }
   }
 
   AccountRoute<void>? _initialRouteIos(BuildContext context) {
@@ -226,8 +341,106 @@ class _ZulipAppState extends State<ZulipApp> with WidgetsBindingObserver {
       case Uri(scheme: 'zulip', host: 'notification') && var url:
         await NotificationOpenService.navigateForAndroidNotificationUrl(url);
         return true;
+      case Uri(scheme: 'zulip', host: 'call') && var url:
+        await _handleCallDeepLink(url);
+        return true;
     }
     return super.didPushRouteInformation(routeInformation);
+  }
+
+  Future<void> _handleCallDeepLink(Uri url) async {
+    assert(debugLog('CALL DEEP LINK - Handling call deep link: $url'));
+
+    final navigator = await ZulipApp.navigator;
+    final context = navigator.context;
+    if (!context.mounted) return;
+
+    // Extract call information from URL
+    final callId = url.pathSegments.isNotEmpty ? url.pathSegments.first : null;
+    final realmUrlStr = url.queryParameters['realm_url'];
+    final userIdStr = url.queryParameters['user_id'];
+    final callType = url.queryParameters['call_type'];
+    final jitsiUrl = url.queryParameters['jitsi_url'];
+    final senderIdStr = url.queryParameters['sender_id'];
+
+    assert(debugLog('CALL DEEP LINK - Extracted params: callId=$callId, realmUrl=$realmUrlStr, userId=$userIdStr, callType=$callType, senderId=$senderIdStr'));
+
+    if (callId == null || realmUrlStr == null || userIdStr == null ||
+        callType == null || jitsiUrl == null) {
+      assert(debugLog('CALL DEEP LINK - Missing required parameters'));
+      return; // Invalid URL
+    }
+
+    try {
+      final realmUrl = Uri.parse(realmUrlStr);
+      final userId = int.parse(userIdStr);
+
+      // Find the account
+      final globalStore = GlobalStoreWidget.of(context);
+      final account = globalStore.accounts.firstWhereOrNull(
+        (account) => account.realmUrl.origin == realmUrl.origin && account.userId == userId);
+
+      if (account == null) {
+        assert(debugLog('CALL DEEP LINK - Account not found'));
+        return; // Account not found
+      }
+
+      assert(debugLog('CALL DEEP LINK - Found account: ${account.realmUrl.origin}:${account.userId}'));
+
+      // Load per-account store if needed
+      final perAccountStore = await globalStore.perAccount(account.id);
+
+      // Try to fetch call details from server, but if that fails, create a Call object
+      // from the information we have in the deep link
+      Call? call = await _fetchCallDetails(perAccountStore.connection, callId);
+
+      if (call == null) {
+        assert(debugLog('CALL DEEP LINK - Failed to fetch call details from server, creating from URL params'));
+        // Parse sender ID from URL, default to 0 if not available
+        final senderId = senderIdStr != null ? int.tryParse(senderIdStr) ?? 0 : 0;
+
+        call = Call(
+          callId: callId,
+          callerId: senderId,
+          recipientId: userId,
+          callType: callType == 'video' ? CallType.video :
+                   callType == 'audio' ? CallType.audio : CallType.audio,
+          status: CallStatus.ringing,
+          jitsiUrl: jitsiUrl,
+          timestamp: null,
+          duration: null,
+        );
+      }
+
+      if (!context.mounted) return;
+
+      assert(debugLog('CALL DEEP LINK - Accepting call and navigating to Jitsi'));
+
+      // Attempt to accept the call right away and go to Jitsi
+      try {
+        await acceptCall(perAccountStore.connection, callId: call.callId);
+        await navigator.push(
+          JitsiCallScreen.buildRoute(accountId: account.id, call: call));
+      } catch (_) {
+        // Fallback to wake-up screen if accept fails
+        await navigator.push(
+          CallWakeUpScreen.buildRoute(accountId: account.id, call: call));
+      }
+    } catch (e) {
+      debugPrint('Error handling call deep link: $e');
+    }
+  }
+
+  Future<Call?> _fetchCallDetails(ApiConnection connection, String callId) async {
+    try {
+      assert(debugLog('CALL DEEP LINK - Fetching call details from server for callId=$callId'));
+      final response = await getCallStatus(connection, callId: callId);
+      assert(debugLog('CALL DEEP LINK - Successfully fetched call details'));
+      return response.call;
+    } catch (e) {
+      assert(debugLog('CALL DEEP LINK - Failed to fetch call details: $e'));
+      return null;
+    }
   }
 
   @override
@@ -257,7 +470,20 @@ class _ZulipAppState extends State<ZulipApp> with WidgetsBindingObserver {
                 (_) => widget._declareReady());
             }
             GlobalLocalizations.zulipLocalizations = ZulipLocalizations.of(context);
-            return child!;
+            // Wrap the app content with incoming call listener and persistent call indicator
+            return IncomingCallListener(
+              child: Stack(
+                children: [
+                  child!,
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: PersistentCallIndicator(),
+                  ),
+                ],
+              ),
+            );
           },
 
           // We use onGenerateInitialRoutes for the real work of specifying the

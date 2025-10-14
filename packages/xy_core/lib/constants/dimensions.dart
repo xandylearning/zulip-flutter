@@ -97,7 +97,7 @@ class XYDimensions {
   // Chat Bubble Constraints
   static const double messageBubbleMaxWidthRatio = 0.75;
   static const double messageBubbleMinWidth = 60.0;
-  static const double messageBubbleMaxWidth = 280.0;
+  static const double messageBubbleMaxWidthConstant = 280.0;
 
   // Shadow/Elevation
   static const double elevationSm = 2.0;

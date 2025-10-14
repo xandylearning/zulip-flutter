@@ -14,11 +14,4 @@ export 'utils/logger.dart';
 export 'utils/validators.dart';
 export 'utils/formatters.dart';
 
-// Services
-export 'services/analytics.dart';
-export 'services/storage.dart';
-export 'services/permissions.dart';
-
-// Models
-export 'models/user_profile.dart';
-export 'models/learning_data.dart';
+// Services and Models will be added in future versions

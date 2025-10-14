@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../api/core.dart';
 import '../api/exception.dart';
+
 import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
@@ -20,6 +21,7 @@ import '../log.dart';
 import '../notifications/receive.dart';
 import 'actions.dart';
 import 'autocomplete.dart';
+import 'call_store.dart';
 import 'database.dart';
 import 'emoji.dart';
 import 'localizations.dart';
@@ -525,6 +527,7 @@ class PerAccountStore extends PerAccountStoreBase with
       recentDmConversationsView: RecentDmConversationsView(core: core,
         initial: initialSnapshot.recentPrivateConversations),
       recentSenders: RecentSenders(),
+      callStore: CallStore(core: core),
     );
   }
 
@@ -544,6 +547,7 @@ class PerAccountStore extends PerAccountStoreBase with
     required this.unreads,
     required this.recentDmConversationsView,
     required this.recentSenders,
+    required this.callStore,
   }) : _groups = groups,
        _realm = realm,
        _emoji = emoji,
@@ -668,6 +672,8 @@ class PerAccountStore extends PerAccountStoreBase with
 
   final RecentSenders recentSenders;
 
+  final CallStore callStore;
+
   //|//////////////////////////////
   // Other digests of data.
 
@@ -692,6 +698,7 @@ class PerAccountStore extends PerAccountStoreBase with
     assert(!_disposed);
     recentDmConversationsView.dispose();
     unreads.dispose();
+    callStore.dispose();
     _messages.dispose();
     presence.dispose();
     typingStatus.dispose();
@@ -848,6 +855,30 @@ class PerAccountStore extends PerAccountStoreBase with
         // Update _users last, so other handlers can compare to the old value.
         _users.handleMutedUsersEvent(event);
         notifyListeners();
+
+      case CallCreatedEvent():
+        assert(debugLog("server event: call/created ${event.call.callId}"));
+        callStore.handleCallCreatedEvent(event);
+
+      case CallAcknowledgedEvent():
+        assert(debugLog("server event: call/acknowledged ${event.callId}"));
+        callStore.handleCallAcknowledgedEvent(event);
+
+      case CallAcceptedEvent():
+        assert(debugLog("server event: call/accepted ${event.callId}"));
+        callStore.handleCallAcceptedEvent(event);
+
+      case CallDeclinedEvent():
+        assert(debugLog("server event: call/declined ${event.callId}"));
+        callStore.handleCallDeclinedEvent(event);
+
+      case CallEndedEvent():
+        assert(debugLog("server event: call/ended ${event.callId}"));
+        callStore.handleCallEndedEvent(event);
+
+      case CallCancelledEvent():
+        assert(debugLog("server event: call/cancelled ${event.callId}"));
+        callStore.handleCallCancelledEvent(event);
 
       case UnexpectedEvent():
         assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better

@@ -47,6 +47,18 @@ class AndroidIntentSendEvent extends AndroidIntentEvent {
   final List<IntentSharedFile>? extraStream;
 }
 
+class AndroidIntentViewEvent extends AndroidIntentEvent {
+  const AndroidIntentViewEvent({
+    required this.action,
+    required this.dataUrl,
+  });
+
+  // This would be 'android.intent.action.VIEW' for this event type.
+  final String action;
+
+  final String dataUrl;
+}
+
 @EventChannelApi()
 abstract class AndroidIntentsEventChannelApi {
   AndroidIntentEvent androidIntentEvents();

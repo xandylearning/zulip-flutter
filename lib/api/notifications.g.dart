@@ -93,7 +93,7 @@ CallFcmMessage _$CallFcmMessageFromJson(Map<String, dynamic> json) =>
       userId: FcmMessageWithIdentity._parseIntFromString(json['user_id']),
       callId: json['call_id'] as String,
       senderFullName: json['sender_full_name'] as String?,
-      callType: json['call_type'] as String,
+      callType: json['call_type'] as String?,
       jitsiUrl: json['jitsi_url'] as String?,
       senderId: CallFcmMessage._parseIntNullable(json['sender_id']),
       timeoutSeconds: json['timeout_seconds'] == null

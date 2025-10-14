@@ -1403,5 +1403,68 @@
   "chatsEmptyPlaceholder": "No conversations yet. Start a new chat!",
   "@chatsEmptyPlaceholder": {
     "description": "Empty state message for chats page when there are no conversations."
+  },
+  "incomingVideoCall": "Incoming video call",
+  "@incomingVideoCall": {
+    "description": "Label for incoming video call on wake-up screen."
+  },
+  "incomingAudioCall": "Incoming audio call",
+  "@incomingAudioCall": {
+    "description": "Label for incoming audio call on wake-up screen."
+  },
+  "accept": "Accept",
+  "@accept": {
+    "description": "Label for accept button on incoming call screen."
+  },
+  "decline": "Decline",
+  "@decline": {
+    "description": "Label for decline button on incoming call screen."
+  },
+  "callStatusCalling": "Calling...",
+  "@callStatusCalling": {
+    "description": "Status text when initiating a call."
+  },
+  "callStatusRinging": "Ringing...",
+  "@callStatusRinging": {
+    "description": "Status text when the call is ringing."
+  },
+  "callStatusConnecting": "Connecting...",
+  "@callStatusConnecting": {
+    "description": "Status text when the call is being connected."
+  },
+  "callStatusDeclined": "Call declined",
+  "@callStatusDeclined": {
+    "description": "Status text when the call was declined."
+  },
+  "callStatusCancelled": "Call cancelled",
+  "@callStatusCancelled": {
+    "description": "Status text when the call was cancelled."
+  },
+  "callStatusEnded": "Call ended",
+  "@callStatusEnded": {
+    "description": "Status text when the call has ended."
+  },
+  "videoCall": "Video call",
+  "@videoCall": {
+    "description": "Label for video call type."
+  },
+  "audioCall": "Audio call",
+  "@audioCall": {
+    "description": "Label for audio call type."
+  },
+  "callIndicatorOngoingVideo": "Ongoing video call",
+  "@callIndicatorOngoingVideo": {
+    "description": "Text shown in persistent call indicator for ongoing video call."
+  },
+  "callIndicatorOngoingAudio": "Ongoing audio call",
+  "@callIndicatorOngoingAudio": {
+    "description": "Text shown in persistent call indicator for ongoing audio call."
+  },
+  "callIndicatorRinging": "Calling {name}...",
+  "@callIndicatorRinging": {
+    "description": "Text shown in persistent call indicator when calling someone.",
+    "placeholders": {
+      "name": {"type": "String", "example": "Alice"}
+    }
   }
 }

@@ -3,6 +3,20 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    configurations.all {
+        resolutionStrategy {
+            // Handle React Native dependencies that don't have profile variants
+            eachDependency { details ->
+                if (details.requested.group == 'com.facebook.react') {
+                    // Use release variant for profile builds when available
+                    if (details.requested.name == 'react-android') {
+                        details.useTarget group: details.requested.group, name: details.requested.name, version: details.requested.version
+                    }
+                }
+            }
+        }
+    }
 }
 
 rootProject.buildDir = '../build'

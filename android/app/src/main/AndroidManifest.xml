@@ -7,13 +7,18 @@
    <uses-permission android:name="android.permission.INTERNET"/>
    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
    <uses-permission android:name="android.permission.VIBRATE"/>
+   <uses-permission android:name="android.permission.CAMERA"/>
+   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+   <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
    <!-- Remove READ_PHONE_STATE permission added by firebase_messaging to avoid privacy policy requirement -->
    <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove" />
    <application
         android:label="xandy"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        tools:replace="android:label">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -43,6 +48,12 @@
                 <data android:scheme="zulip" android:host="login" />
             </intent-filter>
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="zulip" android:host="call" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="*/*" />
@@ -53,6 +64,16 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+
+        <!-- Override Jitsi Meet Activity Configuration for Task Management -->
+        <activity
+            android:name="org.jitsi.meet.sdk.JitsiMeetActivity"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:parentActivityName=".MainActivity"
+            android:excludeFromRecents="true"
+            tools:replace="android:launchMode,android:taskAffinity,android:parentActivityName,android:excludeFromRecents" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

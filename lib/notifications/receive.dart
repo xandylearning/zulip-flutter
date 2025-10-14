@@ -188,7 +188,11 @@ class NotificationService {
   }
 
   static void _onForegroundMessage(FirebaseRemoteMessage message) {
-    assert(debugLog("notif message: ${message.data}"));
+    assert(debugLog("FCM FOREGROUND MESSAGE: ${message.data}"));
+    assert(debugLog("FCM message ID: ${message.messageId}"));
+    assert(debugLog("FCM from: ${message.from}"));
+    assert(debugLog("FCM collapse key: ${message.collapseKey}"));
+    assert(debugLog("FCM notification: ${message.notification}"));
     _onRemoteMessage(message);
   }
 
@@ -204,7 +208,11 @@ class NotificationService {
     //   https://firebase.flutter.dev/docs/messaging/usage/#background-messages
     _initBackgroundIsolate();
 
-    assert(debugLog("notif message in background: ${message.data}"));
+    assert(debugLog("FCM BACKGROUND MESSAGE: ${message.data}"));
+    assert(debugLog("FCM background message ID: ${message.messageId}"));
+    assert(debugLog("FCM background from: ${message.from}"));
+    assert(debugLog("FCM background collapse key: ${message.collapseKey}"));
+    assert(debugLog("FCM background notification: ${message.notification}"));
     _onRemoteMessage(message);
   }
 
@@ -228,7 +236,22 @@ class NotificationService {
   }
 
   static void _onRemoteMessage(FirebaseRemoteMessage message) {
-    final data = FcmMessage.fromJson(message.data);
-    NotificationDisplayManager.onFcmMessage(data, message.data);
+    assert(debugLog("FCM PARSING MESSAGE: ${message.data}"));
+    try {
+      final data = FcmMessage.fromJson(message.data);
+      assert(debugLog("FCM PARSED MESSAGE TYPE: ${data.runtimeType}"));
+      if (data is CallFcmMessage) {
+        assert(debugLog("FCM CALL MESSAGE - Call ID: ${data.callId}"));
+        assert(debugLog("FCM CALL MESSAGE - Sender: ${data.senderFullName}"));
+        assert(debugLog("FCM CALL MESSAGE - Call Type: ${data.callType}"));
+        assert(debugLog("FCM CALL MESSAGE - Jitsi URL: ${data.jitsiUrl}"));
+        assert(debugLog("FCM CALL MESSAGE - Realm URL: ${data.realmUrl}"));
+        assert(debugLog("FCM CALL MESSAGE - User ID: ${data.userId}"));
+      }
+      NotificationDisplayManager.onFcmMessage(data, message.data);
+    } catch (e) {
+      assert(debugLog("FCM PARSING ERROR: $e"));
+      assert(debugLog("FCM RAW DATA: ${message.data}"));
+    }
   }
 }

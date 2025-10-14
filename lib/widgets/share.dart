@@ -32,6 +32,9 @@ class ShareService {
           switch (event) {
             case AndroidIntentSendEvent():
               _handleSend(event);
+            case AndroidIntentViewEvent():
+              // Not handled by share flow; ignore.
+              break;
           }
         });
 

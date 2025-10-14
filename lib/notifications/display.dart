@@ -12,8 +12,12 @@ import '../log.dart';
 import '../model/binding.dart';
 import '../model/localizations.dart';
 import '../model/narrow.dart';
+import '../widgets/app.dart';
 import '../widgets/color.dart';
 import '../widgets/theme.dart';
+import 'call_notification_bridge.dart';
+import '../api/model/call.dart' as model_call;
+import 'callkit_incoming.dart';
 import 'open.dart';
 
 AndroidNotificationHostApi get _androidHost => ZulipBinding.instance.androidNotificationHost;
@@ -22,7 +26,8 @@ enum NotificationSound {
   // TODO(i18n): translate these file display names
   chime2(resourceName: 'chime2', fileDisplayName: 'Zulip - Low Chime.m4a'),
   chime3(resourceName: 'chime3', fileDisplayName: 'Zulip - Chime.m4a'),
-  chime4(resourceName: 'chime4', fileDisplayName: 'Zulip - High Chime.m4a');
+  chime4(resourceName: 'chime4', fileDisplayName: 'Zulip - High Chime.m4a'),
+  ringtone(resourceName: 'ringtone', fileDisplayName: 'Zulip - Call Ringtone.mp3');
   // Any new entry here must appear in `keep.xml` too, see #528.
 
   const NotificationSound({
@@ -44,8 +49,15 @@ class NotificationChannelManager {
   @visibleForTesting
   static const kChannelId = 'messages-4';
 
+  /// The channel ID we use for call notifications.
+  @visibleForTesting
+  static const kCallsChannelId = 'calls-1';
+
   @visibleForTesting
   static const kDefaultNotificationSound = NotificationSound.chime3;
+
+  @visibleForTesting
+  static const kCallsNotificationSound = NotificationSound.ringtone;
 
   /// The vibration pattern we set for notifications.
   // We try to set a vibration pattern that, with the phone in one's pocket,
@@ -53,6 +65,11 @@ class NotificationChannelManager {
   // Discussion: https://chat.zulip.org/#narrow/stream/48-mobile/topic/notification.20vibration.20pattern/near/1284530
   @visibleForTesting
   static final kVibrationPattern = Int64List.fromList([0, 125, 100, 450]);
+
+  /// The vibration pattern for call notifications.
+  // Longer, more persistent pattern suitable for incoming calls.
+  @visibleForTesting
+  static final kCallsVibrationPattern = Int64List.fromList([0, 200, 100, 200, 100, 200, 100, 200]);
 
   /// Generates an Android resource URL for the given resource name and type.
   ///
@@ -219,6 +236,60 @@ class NotificationChannelManager {
       debugLog('Failed to create notification channel: $e');
     }
   }
+
+  /// Create our calls notification channel, if it doesn't already exist.
+  ///
+  /// This is similar to [ensureChannel] but specifically for call notifications
+  /// with the ringtone sound and call-specific vibration pattern.
+  /// Uses MAX importance to ensure calls wake the device from terminated state.
+  @visibleForTesting
+  static Future<void> ensureCallsChannel() async {
+    // See if our calls channel already exists; delete any obsolete
+    // previous channels.
+    var found = false;
+    try {
+      final channels = await _androidHost.getNotificationChannels();
+      for (final channel in channels) {
+        if (channel.id == kCallsChannelId) {
+          found = true;
+        } else if (channel.id.startsWith('calls-')) {
+          // Delete any old calls channels
+          await _androidHost.deleteNotificationChannel(channel.id);
+        }
+      }
+    } catch (e) {
+      // If we can't get notification channels, assume no channels exist
+      // and proceed to create the channel
+      debugLog('Failed to get notification channels: $e');
+      found = false;
+    }
+
+    if (found) {
+      // The channel already exists; nothing to do.
+      return;
+    }
+
+    // The channel doesn't exist. Create it.
+
+    try {
+      final ringtoneSoundUrl = await _resourceUrlFromName(
+        resourceTypeName: 'raw',
+        resourceEntryName: kCallsNotificationSound.resourceName);
+
+      // Use MAX importance to ensure full-screen intent works when app is terminated
+      await _androidHost.createNotificationChannel(NotificationChannel(
+        id: kCallsChannelId,
+        name: 'Incoming Calls', // TODO(#1284)
+        importance: NotificationImportance.max,
+        lightsEnabled: true,
+        soundUrl: ringtoneSoundUrl,
+        vibrationPattern: kCallsVibrationPattern,
+      ));
+    } catch (e) {
+      // If we can't create the notification channel, log the error but don't crash
+      debugLog('Failed to create calls notification channel: $e');
+    }
+  }
 }
 
 /// Service for managing the notifications shown to the user.
@@ -226,14 +297,25 @@ class NotificationDisplayManager {
   static Future<void> init() async {
     assert(defaultTargetPlatform == TargetPlatform.android);
     await NotificationChannelManager.ensureChannel();
+    await NotificationChannelManager.ensureCallsChannel();
   }
 
   static void onFcmMessage(FcmMessage data, Map<String, dynamic> dataJson) {
     assert(defaultTargetPlatform == TargetPlatform.android);
+    assert(debugLog("NOTIFICATION DISPLAY MANAGER - Processing FCM message: ${data.runtimeType}"));
     switch (data) {
-      case MessageFcmMessage(): _onMessageFcmMessage(data, dataJson);
-      case RemoveFcmMessage(): _onRemoveFcmMessage(data);
-      case UnexpectedFcmMessage(): break; // TODO(log)
+      case MessageFcmMessage():
+        assert(debugLog("NOTIFICATION DISPLAY MANAGER - Handling message FCM"));
+        _onMessageFcmMessage(data, dataJson);
+      case RemoveFcmMessage():
+        assert(debugLog("NOTIFICATION DISPLAY MANAGER - Handling remove FCM"));
+        _onRemoveFcmMessage(data);
+      case CallFcmMessage():
+        assert(debugLog("NOTIFICATION DISPLAY MANAGER - Handling call FCM"));
+        _onCallFcmMessage(data);
+      case UnexpectedFcmMessage():
+        assert(debugLog("NOTIFICATION DISPLAY MANAGER - Handling unexpected FCM: ${dataJson}"));
+        break;
     }
   }
 
@@ -454,6 +536,118 @@ class NotificationDisplayManager {
           tag: statusBarNotification.tag, id: statusBarNotification.id);
       }
     }
+  }
+
+  static Future<void> _onCallFcmMessage(CallFcmMessage data) async {
+    // Handle incoming call FCM message
+    assert(debugLog('CALL NOTIFICATION - Incoming call from: ${data.senderFullName ?? "Unknown"}, callId: ${data.callId}'));
+    assert(debugLog('CALL NOTIFICATION - Call type: ${data.callType}'));
+    assert(debugLog('CALL NOTIFICATION - Jitsi URL: ${data.jitsiUrl ?? "None"}'));
+    assert(debugLog('CALL NOTIFICATION - Realm URL: ${data.realmUrl}'));
+    assert(debugLog('CALL NOTIFICATION - User ID: ${data.userId}'));
+    assert(debugLog('CALL NOTIFICATION - Sender ID: ${data.senderId ?? "None"}'));
+    assert(debugLog('CALL NOTIFICATION - Timeout: ${data.timeoutSeconds} seconds'));
+
+    final globalStore = await ZulipBinding.instance.getGlobalStore();
+    assert(debugLog('CALL NOTIFICATION - Found ${globalStore.accounts.length} accounts'));
+
+    final account = globalStore.accounts.firstWhereOrNull((account) =>
+      account.realmUrl.origin == data.realmUrl.origin && account.userId == data.userId);
+
+    // Skip showing notifications for a logged-out account
+    if (account == null) {
+      assert(debugLog('CALL NOTIFICATION - No matching account found, skipping notification'));
+      assert(debugLog('CALL NOTIFICATION - Available accounts: ${globalStore.accounts.map((a) => '${a.realmUrl.origin}:${a.userId}').join(', ')}'));
+      return;
+    }
+
+    // Don't show notification for call responses to outgoing calls
+    // If senderId is null or equals userId, this is likely a response to our outgoing call
+    if (data.senderId == null || data.senderId == data.userId) {
+      assert(debugLog('CALL NOTIFICATION - This is a response to an outgoing call, not showing notification'));
+      return;
+    }
+
+    assert(debugLog('CALL NOTIFICATION - Found matching account: ${account.realmUrl.origin}:${account.userId}'));
+
+    // Check if app is in foreground - if so, show call card instead of notification
+    if (_isAppInForeground()) {
+      assert(debugLog('CALL NOTIFICATION - App is in foreground, showing call card instead of notification'));
+
+      // Import the bridge and handle the call
+      try {
+        await CallNotificationBridge.handleCallFcmMessage(data);
+        assert(debugLog('CALL NOTIFICATION - Call card triggered successfully'));
+        return; // Don't show system notification
+      } catch (e) {
+        assert(debugLog('CALL NOTIFICATION - Error showing call card: $e'));
+        // Fall back to system notification if call card fails
+      }
+    }
+
+    // Show native incoming call UI using CallKit/ConnectionService in background/terminated
+    assert(debugLog('CALL NOTIFICATION - App is in background, showing native incoming UI via CallKit'));
+
+    // Create a deep link URL for the call (consumed on accept)
+    final callUrl = Uri(
+      scheme: 'zulip',
+      host: 'call',
+      pathSegments: [data.callId],
+      queryParameters: {
+        'realm_url': data.realmUrl.toString(),
+        'user_id': data.userId.toString(),
+        'call_type': data.callType ?? 'audio',
+        'jitsi_url': data.jitsiUrl,
+        'sender_id': (data.senderId ?? 0).toString(),
+        'sender_name': data.senderFullName,
+      },
+    );
+
+    assert(debugLog('CALL NOTIFICATION - Created deep link URL: $callUrl'));
+
+    try {
+      // Build absolute avatar URL from realm + senderId if available
+      final String? avatarUrl = (data.senderId != null)
+        ? Uri.parse(data.realmUrl.toString())
+            .resolve('/avatar/${data.senderId}')
+            .toString()
+        : null;
+
+      await CallKitIncomingService.instance.showIncoming(
+        model_call.Call(
+          callId: data.callId,
+          callerId: data.senderId ?? 0,
+          recipientId: data.userId,
+          callType: (data.callType == 'video') ? model_call.CallType.video : model_call.CallType.audio,
+          status: model_call.CallStatus.ringing,
+          jitsiUrl: data.jitsiUrl ?? '',
+          callerDisplayName: data.senderFullName,
+          callerAvatarUrl: avatarUrl,
+          callerHandle: data.senderFullName, // no phone; use name/username
+        ),
+        uuid: data.callId,
+        handle: data.senderFullName ?? 'Caller',
+        displayName: data.senderFullName ?? 'Caller',
+        isVideo: data.callType == 'video',
+        deepLinkUrl: callUrl.toString(),
+        avatar: avatarUrl,
+        androidBackgroundColorHex: '#1976D2',
+        androidActionColorHex: '#FFFFFF',
+        timeoutSeconds: data.timeoutSeconds,
+      );
+      assert(debugLog('CALL NOTIFICATION - Native incoming UI shown via CallKit'));
+    } catch (e, stackTrace) {
+      assert(debugLog('CALL NOTIFICATION - Failed to show CallKit incoming UI: $e'));
+      assert(debugLog('CALL NOTIFICATION - Stack trace: $stackTrace'));
+      rethrow;
+    }
+  }
+
+  /// Check if the app is currently in the foreground
+  static bool _isAppInForeground() {
+    // In background isolate, ZulipApp won't be ready yet
+    // This is a reliable way to detect if we're in background vs foreground
+    return ZulipApp.ready.value;
   }
 
   /// The constant numeric "ID" we use for all non-test notifications,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +8,11 @@ import 'package:flutter_color_models/flutter_color_models.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
 import '../api/model/model.dart';
+import '../api/model/call.dart';
+import '../api/route/calls.dart' as api;
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/binding.dart';
+import '../model/call_permissions.dart';
 import '../model/database.dart';
 import '../model/message.dart';
 import '../model/message_list.dart';
@@ -24,6 +28,8 @@ import 'compose_box.dart';
 import 'content.dart';
 import 'emoji_reaction.dart';
 import 'icons.dart';
+import 'call_dialing_screen.dart';
+import 'jitsi_call_screen.dart';
 import 'page.dart';
 import 'profile.dart';
 import 'scrolling.dart';
@@ -726,12 +732,7 @@ class _ModernDmAppBarTitle extends StatelessWidget {
           children: [
             // Video call button
             IconButton(
-              onPressed: () {
-                // TODO: Implement video call functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Video call feature coming soon!')),
-                );
-              },
+              onPressed: () => _initiateCall(context, user, isVideo: true),
               icon: Icon(
                 Icons.videocam_outlined,
                 color: designVariables.icon,
@@ -746,12 +747,7 @@ class _ModernDmAppBarTitle extends StatelessWidget {
             const SizedBox(width: 4),
             // Voice call button
             IconButton(
-              onPressed: () {
-                // TODO: Implement voice call functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Voice call feature coming soon!')),
-                );
-              },
+              onPressed: () => _initiateCall(context, user, isVideo: false),
               icon: Icon(
                 Icons.phone_outlined,
                 color: designVariables.icon,
@@ -767,6 +763,86 @@ class _ModernDmAppBarTitle extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _initiateCall(BuildContext context, User user, {required bool isVideo}) async {
+    developer.log(
+      'Initiating call from DM screen: userId=${user.userId}, userName=${user.fullName}, isVideo=$isVideo',
+      name: 'CallInitiation',
+    );
+
+    final store = PerAccountStoreWidget.of(context);
+    final accountId = PerAccountStoreWidget.accountIdOf(context);
+    String? callId;
+
+    // Check permissions first
+    final hasPermission = isVideo
+        ? await CallPermissions.requestVideoCallPermissions(context)
+        : await CallPermissions.requestAudioCallPermissions(context);
+
+    if (!hasPermission || !context.mounted) {
+      developer.log('Call initiation failed: permissions denied or context unmounted', name: 'CallInitiation');
+      return;
+    }
+
+    try {
+      developer.log('Creating call via API...', name: 'CallInitiation');
+
+      // Create the call
+      final response = await api.createCall(
+        store.connection,
+        userId: user.userId,
+        isVideoCall: isVideo,
+      );
+
+      callId = response.callId;
+      developer.log('Call created successfully: callId=${response.callId}', name: 'CallInitiation');
+
+      if (!context.mounted) return;
+
+      // Create Call object from response
+      final call = Call(
+        callId: response.callId,
+        callerId: store.selfUserId,
+        recipientId: user.userId,
+        callType: response.callType == 'video' ? CallType.video : CallType.audio,
+        status: CallStatus.created,
+        jitsiUrl: response.callUrl,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+
+      // Manually add to pending calls since CallCreatedEvent might not be received
+      developer.log('Manually adding call to pending outgoing calls: ${call.callId}', name: 'CallInitiation');
+      store.callStore.addPendingOutgoingCall(call);
+      developer.log('Call added to pending calls successfully', name: 'CallInitiation');
+
+      // Navigate to dialing screen first
+      developer.log('Navigating to dialing screen...', name: 'CallInitiation');
+      await Navigator.of(context).push(
+        CallDialingScreen.buildRoute(
+          accountId: accountId,
+          call: call,
+          recipient: user,
+        ),
+      );
+    } catch (e) {
+      developer.log('Call initiation failed: $e', name: 'CallInitiation');
+      if (!context.mounted) return;
+
+      // Cancel the call if it was created but navigation failed
+      if (callId != null) {
+        try {
+          developer.log('Cancelling call due to navigation failure: callId=$callId', name: 'CallInitiation');
+          await api.cancelCall(store.connection, callId: callId);
+        } catch (cancelError) {
+          developer.log('Failed to cancel call after navigation error: $cancelError', name: 'CallInitiation');
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to initiate call: $e')),
+      );
+    }
   }
 }
 

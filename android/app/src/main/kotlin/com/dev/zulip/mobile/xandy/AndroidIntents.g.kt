@@ -43,7 +43,7 @@ private object AndroidIntentsPigeonUtils {
     }
     return a == b
   }
-
+      
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
@@ -84,7 +84,7 @@ data class IntentSharedFile (
  * Generated class from Pigeon that represents data sent in messages.
  * This class should not be extended by any user class outside of the generated file.
  */
-sealed class AndroidIntentEvent
+sealed class AndroidIntentEvent 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AndroidIntentSendEvent (
   val action: String,
@@ -118,6 +118,37 @@ data class AndroidIntentSendEvent (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class AndroidIntentViewEvent (
+  val action: String,
+  val dataUrl: String
+) : AndroidIntentEvent()
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): AndroidIntentViewEvent {
+      val action = pigeonVar_list[0] as String
+      val dataUrl = pigeonVar_list[1] as String
+      return AndroidIntentViewEvent(action, dataUrl)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      action,
+      dataUrl,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is AndroidIntentViewEvent) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return AndroidIntentsPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class AndroidIntentsPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -131,6 +162,11 @@ private open class AndroidIntentsPigeonCodec : StandardMessageCodec() {
           AndroidIntentSendEvent.fromList(it)
         }
       }
+      131.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          AndroidIntentViewEvent.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -142,6 +178,10 @@ private open class AndroidIntentsPigeonCodec : StandardMessageCodec() {
       }
       is AndroidIntentSendEvent -> {
         stream.write(130)
+        writeValue(stream, value.toList())
+      }
+      is AndroidIntentViewEvent -> {
+        stream.write(131)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -187,7 +227,7 @@ class PigeonEventSink<T>(private val sink: EventChannel.EventSink) {
     sink.endOfStream()
   }
 }
-
+      
 abstract class AndroidIntentEventsStreamHandler : AndroidIntentsPigeonEventChannelWrapper<AndroidIntentEvent> {
   companion object {
     fun register(messenger: BinaryMessenger, streamHandler: AndroidIntentEventsStreamHandler, instanceName: String = "") {
@@ -200,4 +240,4 @@ abstract class AndroidIntentEventsStreamHandler : AndroidIntentsPigeonEventChann
     }
   }
 }
-
+      

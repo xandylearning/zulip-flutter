@@ -1,11 +1,15 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../log.dart';
 import '../../model/algorithms.dart';
+import 'call.dart';
 import 'json.dart';
 import 'model.dart';
 import 'submessage.dart';
 
+part 'call_events.dart';
 part 'events.g.dart';
+
 
 /// A Zulip event.
 ///
@@ -89,6 +93,87 @@ sealed class Event {
       case 'presence': return PresenceEvent.fromJson(json);
       case 'reaction': return ReactionEvent.fromJson(json);
       case 'heartbeat': return HeartbeatEvent.fromJson(json);
+      case 'call':
+        try {
+          switch (json['op'] as String) {
+            case 'created':
+              assert(debugLog('CallCreatedEvent parsing: op=created'));
+              return CallCreatedEvent.fromJson(json);
+            case 'acknowledged': return CallAcknowledgedEvent.fromJson(json);
+            case 'accepted': return CallAcceptedEvent.fromJson(json);
+            case 'declined': return CallDeclinedEvent.fromJson(json);
+            case 'ended': return CallEndedEvent.fromJson(json);
+            case 'cancelled': return CallCancelledEvent.fromJson(json);
+            default: return UnexpectedEvent.fromJson(json);
+          }
+        } catch (e) {
+          // Log the error and return an unexpected event to prevent crashes
+          assert(debugLog('Failed to parse call event: $e\nEvent data: $json'));
+          return UnexpectedEvent.fromJson(json);
+        }
+      case 'call_event':
+        // Server sends call_event with event_type field instead of op
+        try {
+          switch (json['event_type'] as String) {
+            case 'created':
+              assert(debugLog('CallCreatedEvent mapping: event_type=created, mapped op=created'));
+              return CallCreatedEvent.fromJson({...json, 'op': 'created'});
+            case 'acknowledged':
+              final receiverId = json['receiver_id'];
+              final mappedJson = {
+                ...json,
+                'op': 'acknowledged',
+                'user_id': receiverId  // Map receiver_id to user_id
+              };
+              assert(debugLog('CallAcknowledgedEvent mapping: receiver_id=$receiverId, mapped user_id=${mappedJson['user_id']}'));
+              if (receiverId == null) {
+                assert(debugLog('WARNING: receiver_id is null in acknowledged event'));
+              }
+              return CallAcknowledgedEvent.fromJson(mappedJson);
+            case 'accepted':
+              final receiverId = json['receiver_id'];
+              final mappedJson = {
+                ...json,
+                'op': 'accepted',
+                'user_id': receiverId  // Map receiver_id to user_id
+              };
+              assert(debugLog('CallAcceptedEvent mapping: receiver_id=$receiverId, mapped user_id=${mappedJson['user_id']}'));
+              if (receiverId == null) {
+                assert(debugLog('WARNING: receiver_id is null in accepted event'));
+              }
+              return CallAcceptedEvent.fromJson(mappedJson);
+            case 'declined':
+              final receiverId = json['receiver_id'];
+              final mappedJson = {
+                ...json,
+                'op': 'declined',
+                'user_id': receiverId  // Map receiver_id to user_id
+              };
+              assert(debugLog('CallDeclinedEvent mapping: receiver_id=$receiverId, mapped user_id=${mappedJson['user_id']}'));
+              if (receiverId == null) {
+                assert(debugLog('WARNING: receiver_id is null in declined event'));
+              }
+              return CallDeclinedEvent.fromJson(mappedJson);
+            case 'ended': return CallEndedEvent.fromJson({...json, 'op': 'ended'});
+            case 'cancelled':
+              final senderId = json['sender_id'];
+              final mappedJson = {
+                ...json,
+                'op': 'cancelled',
+                'user_id': senderId  // Map sender_id to user_id for cancelled events
+              };
+              assert(debugLog('CallCancelledEvent mapping: sender_id=$senderId, mapped user_id=${mappedJson['user_id']}'));
+              if (senderId == null) {
+                assert(debugLog('WARNING: sender_id is null in cancelled event'));
+              }
+              return CallCancelledEvent.fromJson(mappedJson);
+            default: return UnexpectedEvent.fromJson(json);
+          }
+        } catch (e) {
+          // Log the error and return an unexpected event to prevent crashes
+          assert(debugLog('Failed to parse call_event: $e\nEvent data: $json'));
+          return UnexpectedEvent.fromJson(json);
+        }
       // TODO add many more event types
       default: return UnexpectedEvent.fromJson(json);
     }
