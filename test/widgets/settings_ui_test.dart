@@ -1,14 +1,11 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:zulip/widgets/settings.dart';
-import 'package:zulip/widgets/store.dart';
 import 'package:zulip/widgets/theme.dart';
 
 import '../example_data.dart' as eg;
-import '../flutter_checks.dart';
 import '../model/binding.dart';
 import 'test_app.dart';
 

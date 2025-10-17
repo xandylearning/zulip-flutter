@@ -645,25 +645,25 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129:
+      case 129: 
         return NotificationChannel.decode(readValue(buffer)!);
-      case 130:
+      case 130: 
         return AndroidIntent.decode(readValue(buffer)!);
-      case 131:
+      case 131: 
         return PendingIntent.decode(readValue(buffer)!);
-      case 132:
+      case 132: 
         return InboxStyle.decode(readValue(buffer)!);
-      case 133:
+      case 133: 
         return Person.decode(readValue(buffer)!);
-      case 134:
+      case 134: 
         return MessagingStyleMessage.decode(readValue(buffer)!);
-      case 135:
+      case 135: 
         return MessagingStyle.decode(readValue(buffer)!);
-      case 136:
+      case 136: 
         return Notification.decode(readValue(buffer)!);
-      case 137:
+      case 137: 
         return StatusBarNotification.decode(readValue(buffer)!);
-      case 138:
+      case 138: 
         return StoredNotificationSound.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);

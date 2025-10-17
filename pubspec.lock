@@ -1555,6 +1555,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.3"
+  zulip_call_kit:
+    dependency: "direct main"
+    description:
+      path: "packages/zulip_call_kit"
+      relative: true
+    source: path
+    version: "0.1.0"
   zulip_plugin:
     dependency: "direct main"
     description:

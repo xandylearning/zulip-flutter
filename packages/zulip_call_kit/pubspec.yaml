@@ -1,0 +1,40 @@
+name: zulip_call_kit
+description: A Flutter plugin for video/audio calling with customizable UI and Jitsi Meet integration
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.10.0-71.0.dev <4.0.0'
+  flutter: '>=3.33.0-1.0.pre-1285'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # JSON serialization
+  json_annotation: ^4.9.0
+
+  # Jitsi Meet for video calls
+  jitsi_meet_flutter_sdk: ^10.3.0
+
+  # CallKit integration for iOS
+  flutter_callkit_incoming: ^2.0.4
+
+  # Audio player for ringtones
+  audioplayers: ^5.2.1
+
+  # Permissions
+  permission_handler: ^11.1.0
+
+  # Wake lock
+  wakelock_plus: ^1.2.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.5.4
+  build_runner: ^2.3.3
+
+flutter:
+  # No assets in the plugin itself - assets will be in main app

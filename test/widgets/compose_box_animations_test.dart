@@ -1,19 +1,13 @@
-import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/compose_box.dart';
-import 'package:zulip/widgets/store.dart';
 
 import '../example_data.dart' as eg;
-import '../flutter_checks.dart';
 import '../model/binding.dart';
-import '../model/test_store.dart';
 import 'test_app.dart';
 
 void main() {
