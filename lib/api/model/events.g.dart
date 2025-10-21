@@ -1045,6 +1045,62 @@ Map<String, dynamic> _$CallCancelledEventToJson(CallCancelledEvent instance) =>
       'user_id': instance.userId,
     };
 
+CallQueuedEvent _$CallQueuedEventFromJson(Map<String, dynamic> json) =>
+    CallQueuedEvent(
+      id: (json['id'] as num).toInt(),
+      callId: json['call_id'] as String,
+      queueId: json['queue_id'] as String,
+      message: json['message'] as String,
+      expiresAt: json['expires_at'] as String,
+    );
+
+Map<String, dynamic> _$CallQueuedEventToJson(CallQueuedEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'op': instance.op,
+      'call_id': instance.callId,
+      'queue_id': instance.queueId,
+      'message': instance.message,
+      'expires_at': instance.expiresAt,
+    };
+
+CallNetworkFailureEvent _$CallNetworkFailureEventFromJson(
+  Map<String, dynamic> json,
+) => CallNetworkFailureEvent(
+  id: (json['id'] as num).toInt(),
+  callId: json['call_id'] as String,
+  userId: _parseIntFromString(json['user_id']),
+);
+
+Map<String, dynamic> _$CallNetworkFailureEventToJson(
+  CallNetworkFailureEvent instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'type': instance.type,
+  'op': instance.op,
+  'call_id': instance.callId,
+  'user_id': instance.userId,
+};
+
+ParticipantLeftEvent _$ParticipantLeftEventFromJson(
+  Map<String, dynamic> json,
+) => ParticipantLeftEvent(
+  id: (json['id'] as num).toInt(),
+  callId: json['call_id'] as String,
+  userId: _parseIntFromString(json['user_id']),
+);
+
+Map<String, dynamic> _$ParticipantLeftEventToJson(
+  ParticipantLeftEvent instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'type': instance.type,
+  'op': instance.op,
+  'call_id': instance.callId,
+  'user_id': instance.userId,
+};
+
 const _$MessageTypeEnumMap = {
   MessageType.stream: 'stream',
   MessageType.direct: 'direct',

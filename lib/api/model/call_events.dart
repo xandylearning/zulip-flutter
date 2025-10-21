@@ -150,6 +150,81 @@ class CallCancelledEvent extends CallEvent {
   Map<String, dynamic> toJson() => _$CallCancelledEventToJson(this);
 }
 
+/// A [CallEvent] with op `queued`: call was queued due to busy recipient.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class CallQueuedEvent extends CallEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'queued';
+
+  final String callId;
+  final String queueId;
+  final String message;
+  final String expiresAt;
+
+  CallQueuedEvent({
+    required super.id,
+    required this.callId,
+    required this.queueId,
+    required this.message,
+    required this.expiresAt,
+  });
+
+  factory CallQueuedEvent.fromJson(Map<String, dynamic> json) =>
+    _$CallQueuedEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$CallQueuedEventToJson(this);
+}
+
+/// A [CallEvent] with op `network_failure`: network disconnection detected.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class CallNetworkFailureEvent extends CallEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'network_failure';
+
+  final String callId;
+  @JsonKey(fromJson: _parseIntFromString)
+  final int userId;
+
+  CallNetworkFailureEvent({
+    required super.id,
+    required this.callId,
+    required this.userId,
+  });
+
+  factory CallNetworkFailureEvent.fromJson(Map<String, dynamic> json) =>
+    _$CallNetworkFailureEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$CallNetworkFailureEventToJson(this);
+}
+
+/// A [CallEvent] with op `participant_left`: non-moderator left the call.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class ParticipantLeftEvent extends CallEvent {
+  @override
+  @JsonKey(includeToJson: true)
+  String get op => 'participant_left';
+
+  final String callId;
+  @JsonKey(fromJson: _parseIntFromString)
+  final int userId;
+
+  ParticipantLeftEvent({
+    required super.id,
+    required this.callId,
+    required this.userId,
+  });
+
+  factory ParticipantLeftEvent.fromJson(Map<String, dynamic> json) =>
+    _$ParticipantLeftEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ParticipantLeftEventToJson(this);
+}
+
 /// Custom converter for parsing integers from strings
 int _parseIntFromString(dynamic value) {
   if (value == null) {

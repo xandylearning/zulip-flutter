@@ -236,22 +236,30 @@ Future<ActiveCallsResponse> getActiveCalls(ApiConnection connection) {
 }
 
 /// https://zulip.com/api/calls/history (hypothetical endpoint)
+///
+/// Supports cursor-based pagination and filtering by call type and status.
 Future<CallHistoryResponse> getCallHistory(ApiConnection connection, {
   int limit = 50,
-  int offset = 0,
+  String? cursor,  // Base64-encoded cursor for pagination
+  String? callType,  // Filter by type: 'video' or 'audio'
+  String? status,  // Filter by status: 'missed', 'answered', or 'all'
 }) {
   developer.log(
-    'Getting call history: limit=$limit, offset=$offset',
+    'Getting call history: limit=$limit, cursor=$cursor, callType=$callType, status=$status',
     name: 'CallAPI',
   );
 
   try {
-    developer.log('Sending call history request with limit=$limit, offset=$offset', name: 'CallAPI');
+    developer.log('Sending call history request with limit=$limit, cursor=$cursor', name: 'CallAPI');
 
-    final response = connection.get('getCallHistory', CallHistoryResponse.fromJson, 'calls/history', {
+    final params = <String, dynamic>{
       'limit': limit,
-      'offset': offset,
-    });
+      if (cursor != null) 'cursor': cursor,
+      if (callType != null) 'call_type': callType,
+      if (status != null) 'status': status,
+    };
+
+    final response = connection.get('getCallHistory', CallHistoryResponse.fromJson, 'calls/history', params);
 
     developer.log('Call history request sent successfully', name: 'CallAPI');
     return response;
@@ -287,6 +295,43 @@ Future<bool> validateCallState(ApiConnection connection, {
     developer.log('Failed to validate call state for callId=$callId: $e', name: 'CallAPI');
     return false;
   }
+}
+
+/// https://zulip.com/api/calls/{callId}/leave (hypothetical endpoint)
+/// Leave a call (for non-moderators) or end for everyone (if moderator)
+Future<CallActionResponse> leaveCall(ApiConnection connection, {
+  required String callId,
+}) {
+  developer.log(
+    'Leaving call: callId=$callId',
+    name: 'CallAPI',
+  );
+
+  return connection.post('leaveCall', CallActionResponse.fromJson, 'calls/$callId/leave', {});
+}
+
+/// https://zulip.com/api/calls/queue (hypothetical endpoint)
+/// Get pending queued calls for the current user
+Future<CallQueueResponse> getCallQueue(ApiConnection connection) {
+  developer.log(
+    'Getting call queue',
+    name: 'CallAPI',
+  );
+
+  return connection.get('getCallQueue', CallQueueResponse.fromJson, 'calls/queue', {});
+}
+
+/// https://zulip.com/api/calls/queue/{queueId}/cancel (hypothetical endpoint)
+/// Cancel a queued call before it's processed
+Future<CallActionResponse> cancelQueuedCall(ApiConnection connection, {
+  required String queueId,
+}) {
+  developer.log(
+    'Cancelling queued call: queueId=$queueId',
+    name: 'CallAPI',
+  );
+
+  return connection.post('cancelQueuedCall', CallActionResponse.fromJson, 'calls/queue/$queueId/cancel', {});
 }
 
 

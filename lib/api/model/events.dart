@@ -104,6 +104,9 @@ sealed class Event {
             case 'declined': return CallDeclinedEvent.fromJson(json);
             case 'ended': return CallEndedEvent.fromJson(json);
             case 'cancelled': return CallCancelledEvent.fromJson(json);
+            case 'queued': return CallQueuedEvent.fromJson(json);
+            case 'network_failure': return CallNetworkFailureEvent.fromJson(json);
+            case 'participant_left': return ParticipantLeftEvent.fromJson(json);
             default: return UnexpectedEvent.fromJson(json);
           }
         } catch (e) {
@@ -167,6 +170,22 @@ sealed class Event {
                 assert(debugLog('WARNING: sender_id is null in cancelled event'));
               }
               return CallCancelledEvent.fromJson(mappedJson);
+            case 'queued':
+              return CallQueuedEvent.fromJson({...json, 'op': 'queued'});
+            case 'network_failure':
+              final userId = json['user_id'];
+              return CallNetworkFailureEvent.fromJson({
+                ...json,
+                'op': 'network_failure',
+                'user_id': userId,
+              });
+            case 'participant_left':
+              final userId = json['user_id'];
+              return ParticipantLeftEvent.fromJson({
+                ...json,
+                'op': 'participant_left',
+                'user_id': userId,
+              });
             default: return UnexpectedEvent.fromJson(json);
           }
         } catch (e) {

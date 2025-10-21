@@ -724,7 +724,18 @@ class PerAccountStore extends PerAccountStoreBase with
       case AlertWordsEvent():
         assert(debugLog("server event: alert_words"));
         // We don't yet store this data, so there's nothing to update.
-
+      case CallQueuedEvent():
+        assert(debugLog("server event: call/queued ${event.callId}"));
+        callStore.handleCallQueuedEvent(event);
+        notifyListeners();
+      case CallNetworkFailureEvent():
+        assert(debugLog("server event: call/network_failure ${event.callId}"));
+        callStore.handleNetworkFailureEvent(event);
+        notifyListeners();
+      case ParticipantLeftEvent():
+        assert(debugLog("server event: call/participant_left ${event.callId}"));
+        callStore.handleParticipantLeftEvent(event);
+        notifyListeners();
       case UserSettingsUpdateEvent():
         assert(debugLog("server event: user_settings/update ${event.property?.name ?? '[unrecognized]'}"));
         if (event.property == null) {

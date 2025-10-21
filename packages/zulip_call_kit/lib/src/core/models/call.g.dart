@@ -1,5 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
+// ignore_for_file: constant_identifier_names, unnecessary_cast
+
 part of 'call.dart';
 
 // **************************************************************************
@@ -7,38 +9,42 @@ part of 'call.dart';
 // **************************************************************************
 
 Call _$CallFromJson(Map<String, dynamic> json) => Call(
-  callId: json['call_id'] as String,
-  callerId: (json['caller_id'] as num).toInt(),
-  recipientId: (json['recipient_id'] as num).toInt(),
-  callType: $enumDecode(_$CallTypeEnumMap, json['call_type']),
-  status: $enumDecode(_$CallStatusEnumMap, json['status']),
-  jitsiUrl: json['jitsi_url'] as String,
-  timestamp: (json['timestamp'] as num?)?.toInt(),
-  duration: (json['duration'] as num?)?.toInt(),
-  callerDisplayName: json['caller_display_name'] as String?,
-  callerAvatarUrl: json['caller_avatar_url'] as String?,
-  callerHandle: json['caller_handle'] as String?,
-);
+      callId: json['call_id'] as String,
+      callerId: (json['caller_id'] as num).toInt(),
+      recipientId: (json['recipient_id'] as num).toInt(),
+      callType: $enumDecode(_$CallTypeEnumMap, json['call_type']),
+      status: $enumDecode(_$CallStatusEnumMap, json['status']),
+      jitsiUrl: json['jitsi_url'] as String,
+      timestamp: (json['timestamp'] as num?)?.toInt(),
+      duration: (json['duration'] as num?)?.toInt(),
+      callerDisplayName: json['caller_display_name'] as String?,
+      callerAvatarUrl: json['caller_avatar_url'] as String?,
+      callerHandle: json['caller_handle'] as String?,
+    );
 
 Map<String, dynamic> _$CallToJson(Call instance) => <String, dynamic>{
-  'call_id': instance.callId,
-  'caller_id': instance.callerId,
-  'recipient_id': instance.recipientId,
-  'call_type': instance.callType,
-  'status': instance.status,
-  'jitsi_url': instance.jitsiUrl,
-  'timestamp': instance.timestamp,
-  'duration': instance.duration,
-  'caller_display_name': instance.callerDisplayName,
-  'caller_avatar_url': instance.callerAvatarUrl,
-  'caller_handle': instance.callerHandle,
-};
+      'call_id': instance.callId,
+      'caller_id': instance.callerId,
+      'recipient_id': instance.recipientId,
+      'call_type': _$CallTypeEnumMap[instance.callType]!,
+      'status': _$CallStatusEnumMap[instance.status]!,
+      'jitsi_url': instance.jitsiUrl,
+      'timestamp': instance.timestamp,
+      'duration': instance.duration,
+      'caller_display_name': instance.callerDisplayName,
+      'caller_avatar_url': instance.callerAvatarUrl,
+      'caller_handle': instance.callerHandle,
+    };
 
-const _$CallTypeEnumMap = {CallType.audio: 'audio', CallType.video: 'video'};
+const _$CallTypeEnumMap = {
+  CallType.audio: 'audio',
+  CallType.video: 'video',
+};
 
 const _$CallStatusEnumMap = {
   CallStatus.created: 'created',
   CallStatus.ringing: 'ringing',
+  CallStatus.queued: 'queued',
   CallStatus.accepted: 'accepted',
   CallStatus.declined: 'declined',
   CallStatus.ended: 'ended',
@@ -56,7 +62,8 @@ CreateCallResponse _$CreateCallResponseFromJson(Map<String, dynamic> json) =>
       recipient: UserInfo.fromJson(json['recipient'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$CreateCallResponseToJson(CreateCallResponse instance) =>
+Map<String, dynamic> _$CreateCallResponseToJson(
+        CreateCallResponse instance) =>
     <String, dynamic>{
       'result': instance.result,
       'call_id': instance.callId,
@@ -68,16 +75,16 @@ Map<String, dynamic> _$CreateCallResponseToJson(CreateCallResponse instance) =>
     };
 
 UserInfo _$UserInfoFromJson(Map<String, dynamic> json) => UserInfo(
-  userId: (json['user_id'] as num).toInt(),
-  fullName: json['full_name'] as String,
-  email: json['email'] as String,
-);
+      userId: (json['user_id'] as num).toInt(),
+      fullName: json['full_name'] as String,
+      email: json['email'] as String,
+    );
 
 Map<String, dynamic> _$UserInfoToJson(UserInfo instance) => <String, dynamic>{
-  'user_id': instance.userId,
-  'full_name': instance.fullName,
-  'email': instance.email,
-};
+      'user_id': instance.userId,
+      'full_name': instance.fullName,
+      'email': instance.email,
+    };
 
 CallActionResponse _$CallActionResponseFromJson(Map<String, dynamic> json) =>
     CallActionResponse(
@@ -85,8 +92,12 @@ CallActionResponse _$CallActionResponseFromJson(Map<String, dynamic> json) =>
       msg: json['msg'] as String?,
     );
 
-Map<String, dynamic> _$CallActionResponseToJson(CallActionResponse instance) =>
-    <String, dynamic>{'result': instance.result, 'msg': instance.msg};
+Map<String, dynamic> _$CallActionResponseToJson(
+        CallActionResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'msg': instance.msg,
+    };
 
 CallStatusResponse _$CallStatusResponseFromJson(Map<String, dynamic> json) =>
     CallStatusResponse(
@@ -94,8 +105,12 @@ CallStatusResponse _$CallStatusResponseFromJson(Map<String, dynamic> json) =>
       call: Call.fromJson(json['call'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$CallStatusResponseToJson(CallStatusResponse instance) =>
-    <String, dynamic>{'result': instance.result, 'call': instance.call};
+Map<String, dynamic> _$CallStatusResponseToJson(
+        CallStatusResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'call': instance.call,
+    };
 
 CallHistoryResponse _$CallHistoryResponseFromJson(Map<String, dynamic> json) =>
     CallHistoryResponse(
@@ -103,16 +118,18 @@ CallHistoryResponse _$CallHistoryResponseFromJson(Map<String, dynamic> json) =>
       calls: (json['calls'] as List<dynamic>)
           .map((e) => HistoricalCall.fromJson(e as Map<String, dynamic>))
           .toList(),
+      nextCursor: json['next_cursor'] as String?,
       hasMore: json['has_more'] as bool,
     );
 
 Map<String, dynamic> _$CallHistoryResponseToJson(
-  CallHistoryResponse instance,
-) => <String, dynamic>{
-  'result': instance.result,
-  'calls': instance.calls,
-  'has_more': instance.hasMore,
-};
+        CallHistoryResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'calls': instance.calls,
+      'next_cursor': instance.nextCursor,
+      'has_more': instance.hasMore,
+    };
 
 HistoricalCall _$HistoricalCallFromJson(Map<String, dynamic> json) =>
     HistoricalCall(
@@ -148,12 +165,12 @@ EndAllCallsResponse _$EndAllCallsResponseFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$EndAllCallsResponseToJson(
-  EndAllCallsResponse instance,
-) => <String, dynamic>{
-  'result': instance.result,
-  'message': instance.message,
-  'calls_ended': instance.callsEnded,
-};
+        EndAllCallsResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'message': instance.message,
+      'calls_ended': instance.callsEnded,
+    };
 
 ActiveCallsResponse _$ActiveCallsResponseFromJson(Map<String, dynamic> json) =>
     ActiveCallsResponse(
@@ -165,25 +182,25 @@ ActiveCallsResponse _$ActiveCallsResponseFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$ActiveCallsResponseToJson(
-  ActiveCallsResponse instance,
-) => <String, dynamic>{
-  'result': instance.result,
-  'active_calls': instance.activeCalls,
-  'count': instance.count,
-};
+        ActiveCallsResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'active_calls': instance.activeCalls,
+      'count': instance.count,
+    };
 
 ActiveCall _$ActiveCallFromJson(Map<String, dynamic> json) => ActiveCall(
-  callId: json['call_id'] as String,
-  callType: json['call_type'] as String,
-  state: json['state'] as String,
-  senderId: (json['sender_id'] as num).toInt(),
-  senderName: json['sender_name'] as String,
-  receiverId: (json['receiver_id'] as num).toInt(),
-  receiverName: json['receiver_name'] as String,
-  jitsiUrl: json['jitsi_url'] as String,
-  createdAt: json['created_at'] as String,
-  isOutgoing: json['is_outgoing'] as bool,
-);
+      callId: json['call_id'] as String,
+      callType: json['call_type'] as String,
+      state: json['state'] as String,
+      senderId: (json['sender_id'] as num).toInt(),
+      senderName: json['sender_name'] as String,
+      receiverId: (json['receiver_id'] as num).toInt(),
+      receiverName: json['receiver_name'] as String,
+      jitsiUrl: json['jitsi_url'] as String,
+      createdAt: json['created_at'] as String,
+      isOutgoing: json['is_outgoing'] as bool,
+    );
 
 Map<String, dynamic> _$ActiveCallToJson(ActiveCall instance) =>
     <String, dynamic>{
@@ -198,3 +215,82 @@ Map<String, dynamic> _$ActiveCallToJson(ActiveCall instance) =>
       'created_at': instance.createdAt,
       'is_outgoing': instance.isOutgoing,
     };
+
+QueuedCallResponse _$QueuedCallResponseFromJson(Map<String, dynamic> json) =>
+    QueuedCallResponse(
+      result: json['result'] as String,
+      queueId: json['queue_id'] as String,
+      message: json['message'] as String,
+      expiresAt: json['expires_at'] as String,
+      position: json['position'] as String,
+    );
+
+Map<String, dynamic> _$QueuedCallResponseToJson(
+        QueuedCallResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'queue_id': instance.queueId,
+      'message': instance.message,
+      'expires_at': instance.expiresAt,
+      'position': instance.position,
+    };
+
+CallQueueEntry _$CallQueueEntryFromJson(Map<String, dynamic> json) =>
+    CallQueueEntry(
+      queueId: json['queue_id'] as String,
+      caller: UserInfo.fromJson(json['caller'] as Map<String, dynamic>),
+      callType: json['call_type'] as String,
+      createdAt: json['created_at'] as String,
+      expiresAt: json['expires_at'] as String,
+    );
+
+Map<String, dynamic> _$CallQueueEntryToJson(CallQueueEntry instance) =>
+    <String, dynamic>{
+      'queue_id': instance.queueId,
+      'caller': instance.caller,
+      'call_type': instance.callType,
+      'created_at': instance.createdAt,
+      'expires_at': instance.expiresAt,
+    };
+
+CallQueueResponse _$CallQueueResponseFromJson(Map<String, dynamic> json) =>
+    CallQueueResponse(
+      result: json['result'] as String,
+      queue: (json['queue'] as List<dynamic>)
+          .map((e) => CallQueueEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      count: (json['count'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$CallQueueResponseToJson(CallQueueResponse instance) =>
+    <String, dynamic>{
+      'result': instance.result,
+      'queue': instance.queue,
+      'count': instance.count,
+    };
+
+T $enumDecode<T>(
+  Map<T, dynamic> enumValues,
+  dynamic source, {
+  T? unknownValue,
+}) {
+  if (source == null) {
+    throw ArgumentError(
+      'A value must be provided. Supported values: '
+      '${enumValues.values.join(', ')}',
+    );
+  }
+
+  return enumValues.entries.singleWhere(
+    (e) => e.value == source,
+    orElse: () {
+      if (unknownValue == null) {
+        throw ArgumentError(
+          '`$source` is not one of the supported values: '
+          '${enumValues.values.join(', ')}',
+        );
+      }
+      return MapEntry(unknownValue, enumValues.values.first);
+    },
+  ).key;
+}

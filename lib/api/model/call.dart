@@ -13,4 +13,7 @@ export 'package:zulip_call_kit/zulip_call_kit.dart'
     EndAllCallsResponse,
     ActiveCallsResponse,
     ActiveCall,
-    UserInfo;
+    UserInfo,
+    QueuedCallResponse,
+    CallQueueEntry,
+    CallQueueResponse;

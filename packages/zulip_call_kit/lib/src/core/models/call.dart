@@ -79,12 +79,42 @@ enum CallType {
 enum CallStatus {
   created,
   ringing,
+  queued,
   accepted,
   declined,
   ended,
   cancelled;
 
   String toJson() => _$CallStatusEnumMap[this]!;
+
+  /// Returns true if the call is in an active state (ringing or accepted)
+  bool get isActive => this == ringing || this == accepted;
+
+  /// Returns true if the call is in a terminal state (cannot transition further)
+  bool get isTerminal => this == ended || this == cancelled || this == declined;
+
+  /// Returns the set of valid next states for this status
+  Set<CallStatus> get validNextStates {
+    switch (this) {
+      case created:
+        return {ringing, queued, cancelled, declined};
+      case ringing:
+        return {accepted, declined, cancelled};
+      case queued:
+        return {created, cancelled};  // Queue processes to create new call
+      case accepted:
+        return {ended};
+      case declined:
+      case ended:
+      case cancelled:
+        return {};  // Terminal states
+    }
+  }
+
+  /// Returns true if this status can transition to the given next status
+  bool canTransitionTo(CallStatus next) {
+    return validNextStates.contains(next);
+  }
 }
 
 /// Response from creating a call
@@ -163,16 +193,18 @@ class CallStatusResponse {
   Map<String, dynamic> toJson() => _$CallStatusResponseToJson(this);
 }
 
-/// Response for getting call history
+/// Response for getting call history (with cursor-based pagination)
 @JsonSerializable(fieldRename: FieldRename.snake)
 class CallHistoryResponse {
   final String result;
   final List<HistoricalCall> calls;
+  final String? nextCursor;  // Base64-encoded cursor for next page
   final bool hasMore;
 
   const CallHistoryResponse({
     required this.result,
     required this.calls,
+    this.nextCursor,
     required this.hasMore,
   });
 
@@ -277,4 +309,66 @@ class ActiveCall {
   factory ActiveCall.fromJson(Map<String, dynamic> json) =>
       _$ActiveCallFromJson(json);
   Map<String, dynamic> toJson() => _$ActiveCallToJson(this);
+}
+
+/// Response when a call is queued (HTTP 202)
+@JsonSerializable(fieldRename: FieldRename.snake)
+class QueuedCallResponse {
+  final String result;  // Should be "queued"
+  final String queueId;
+  final String message;
+  final String expiresAt;  // ISO 8601 timestamp
+  final String position;   // e.g., "next" or a number
+
+  const QueuedCallResponse({
+    required this.result,
+    required this.queueId,
+    required this.message,
+    required this.expiresAt,
+    required this.position,
+  });
+
+  factory QueuedCallResponse.fromJson(Map<String, dynamic> json) =>
+      _$QueuedCallResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$QueuedCallResponseToJson(this);
+}
+
+/// Entry in the call queue
+@JsonSerializable(fieldRename: FieldRename.snake)
+class CallQueueEntry {
+  final String queueId;
+  final UserInfo caller;
+  final String callType;  // "video" or "audio"
+  final String createdAt;
+  final String expiresAt;
+
+  const CallQueueEntry({
+    required this.queueId,
+    required this.caller,
+    required this.callType,
+    required this.createdAt,
+    required this.expiresAt,
+  });
+
+  factory CallQueueEntry.fromJson(Map<String, dynamic> json) =>
+      _$CallQueueEntryFromJson(json);
+  Map<String, dynamic> toJson() => _$CallQueueEntryToJson(this);
+}
+
+/// Response for getting the call queue
+@JsonSerializable(fieldRename: FieldRename.snake)
+class CallQueueResponse {
+  final String result;
+  final List<CallQueueEntry> queue;
+  final int count;
+
+  const CallQueueResponse({
+    required this.result,
+    required this.queue,
+    required this.count,
+  });
+
+  factory CallQueueResponse.fromJson(Map<String, dynamic> json) =>
+      _$CallQueueResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$CallQueueResponseToJson(this);
 }
