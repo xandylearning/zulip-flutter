@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Highlights for users
+
+* Filter conversations in the Chats screen by type: All, Unread, Favorites, or Groups.
+  Interactive filter bubbles make it easy to find the conversations you need.
+
 
 ## 30.0.264 (2025-08-20)
 

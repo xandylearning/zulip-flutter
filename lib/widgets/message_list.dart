@@ -668,31 +668,95 @@ class MessageListAppBarTitle extends StatelessWidget {
 }
 
 /// Modern DM app bar title with user info, status and call buttons
-class _ModernDmAppBarTitle extends StatelessWidget {
+class _ModernDmAppBarTitle extends StatefulWidget {
   const _ModernDmAppBarTitle({required this.user});
 
   final User user;
 
   @override
+  State<_ModernDmAppBarTitle> createState() => _ModernDmAppBarTitleState();
+}
+
+class _ModernDmAppBarTitleState extends State<_ModernDmAppBarTitle>
+    with PerAccountStoreAwareStateMixin<_ModernDmAppBarTitle> {
+
+  @override
+  void onNewStore() {
+    final newStore = PerAccountStoreWidget.of(context);
+    newStore.presence.removeListener(_presenceChanged);
+    newStore.presence.addListener(_presenceChanged);
+  }
+
+  @override
+  void dispose() {
+    final store = PerAccountStoreWidget.of(context);
+    store.presence.removeListener(_presenceChanged);
+    super.dispose();
+  }
+
+  void _presenceChanged() {
+    setState(() {
+      // Presence state lives in store.presence
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
 
-    // Determine user status - simplified for now
-    final isOnline = false; // TODO: Implement proper presence checking
-    final statusText = isOnline ? 'Online' : 'Last seen recently';
-    final statusColor = isOnline
-        ? const Color(0xFF4CAF50) // Green for online
-        : designVariables.textMessageMuted;
+    // Get actual presence status from store
+    final presenceStatus = store.presence.presenceStatusForUser(
+      widget.user.userId,
+      utcNow: DateTime.now().toUtc(),
+    );
+
+    // Determine status text and color based on actual presence
+    final String statusText;
+    final Color statusColor;
+
+    switch (presenceStatus) {
+      case PresenceStatus.active:
+        statusText = 'Active now';
+        statusColor = const Color(0xFF4CAF50); // Green for online
+      case PresenceStatus.idle:
+        statusText = 'Idle';
+        statusColor = const Color(0xFFFF9800); // Orange for idle
+      case null:
+        // User is offline - show last seen time if available
+        final lastActiveTimestamp = store.presence.userLastActive(widget.user.userId);
+        if (lastActiveTimestamp != null) {
+          final now = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+          final ageSeconds = now - lastActiveTimestamp;
+          if (ageSeconds < 60) {
+            statusText = 'Active just now';
+          } else if (ageSeconds < 60 * 60) {
+            statusText = 'Active ${ageSeconds ~/ 60}m ago';
+          } else if (ageSeconds < 24 * 60 * 60) {
+            statusText = 'Active ${ageSeconds ~/ (60 * 60)}h ago';
+          } else if (ageSeconds < 7 * 24 * 60 * 60) {
+            // Show days for up to a week
+            final days = ageSeconds ~/ (24 * 60 * 60);
+            statusText = 'Active ${days}d ago';
+          } else {
+            // For very old activity, just show offline
+            statusText = 'Offline';
+          }
+        } else {
+          statusText = 'Offline';
+        }
+        statusColor = designVariables.textMessageMuted;
+    }
 
     return Row(
       children: [
         // User avatar
         Hero(
-          tag: 'dm_appbar_avatar_${user.userId}',
+          tag: 'dm_appbar_avatar_${widget.user.userId}',
           child: Avatar(
             size: 40,
             borderRadius: 20,
-            userId: user.userId,
+            userId: widget.user.userId,
             showPresence: true,
           ),
         ),
@@ -705,7 +769,7 @@ class _ModernDmAppBarTitle extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                user.fullName,
+                widget.user.fullName,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -732,7 +796,7 @@ class _ModernDmAppBarTitle extends StatelessWidget {
           children: [
             // Video call button
             IconButton(
-              onPressed: () => _initiateCall(context, user, isVideo: true),
+              onPressed: () => _initiateCall(context, widget.user, isVideo: true),
               icon: Icon(
                 Icons.videocam_outlined,
                 color: designVariables.icon,
@@ -747,7 +811,7 @@ class _ModernDmAppBarTitle extends StatelessWidget {
             const SizedBox(width: 4),
             // Voice call button
             IconButton(
-              onPressed: () => _initiateCall(context, user, isVideo: false),
+              onPressed: () => _initiateCall(context, widget.user, isVideo: false),
               icon: Icon(
                 Icons.phone_outlined,
                 color: designVariables.icon,
